@@ -140,6 +140,25 @@ test('wrong words: drill misses are reviewed, knowing a word clears it', async (
   assert.ok((await client(core).call('review')).error);
 });
 
+test('abuse: per-connection rate limit, repeated writes are skipped', async () => {
+  let t = Date.now();
+  const sql = sqlite();
+  let writes = 0;
+  const exec = sql.exec;
+  sql.exec = (q, ...p) => { if (/^\s*insert into players/i.test(q)) writes++; return exec(q, ...p); };
+  const core = createCore({ sql, now: () => t });
+  const s = await guest(core, 'spammer');
+  writes = 0;
+  for (let i = 0; i < 50; i++) s.emit('missed', '爱');
+  for (let i = 0; i < 9; i++) await s.call('learned', { h: '八', known: true });
+  assert.strictEqual(writes, 3, 'new miss, new learned word, first play of the day — repeats write nothing');
+  // 60 messages per 10 s per connection: the next one is dropped, never answered.
+  const dropped = await Promise.race([s.call('me'), new Promise(r => setTimeout(() => r('dropped'), 50))]);
+  assert.strictEqual(dropped, 'dropped');
+  t += 10_001;
+  assert.strictEqual((await s.call('me')).me.name, 'spammer', 'allowed again after the window');
+});
+
 test('streak counts consecutive days of any play, in Vietnam time', async () => {
   let t = Date.parse('2026-10-24T16:59:00Z'); // 23:59 in Vietnam
   const core = createCore({ sql: sqlite(), now: () => t });

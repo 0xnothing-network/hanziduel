@@ -19,6 +19,9 @@ const SEALS = [...'子丑寅卯辰巳午未申酉戌亥']; // the 12 earthly bra
 // Seals were briefly the animal characters; show those players their branch instead.
 const BRANCH_OF = Object.fromEntries([...'鼠牛虎兔龙蛇马羊猴鸡狗猪'].map((a, i) => [a, SEALS[i]]));
 const MAX_MESSAGE = 10_000; // every client message is tiny; cap it so a client can't push megabytes
+// Normal play sends under 3 messages a second. The cap stops one client from burning the
+// Durable Object's daily write quota (100k rows on the free plan) and taking the game down.
+const RATE_WINDOW_MS = 10_000, RATE_MAX = 60;
 const validLevel = lv => Number.isInteger(lv) && lv >= 1 && lv <= 7;
 const hex = bytes => [...new Uint8Array(bytes)].map(b => b.toString(16).padStart(2, '0')).join('');
 const randomHex = n => hex(crypto.getRandomValues(new Uint8Array(n)));
@@ -202,8 +205,9 @@ export function createCore({ sql, clientId = '', verifyGoogle, now = Date.now })
       if (!p) return { error: 'Chưa đăng nhập' };
       if (typeof h !== 'string' || !WORD_LEVEL.has(h)) return { error: 'Từ không tồn tại' };
       // Knowing a word also takes it off the review list.
+      const before = JSON.stringify([p.learned[h], p.wrong?.[h]]);
       if (known) { p.learned[h] = 1; if (p.wrong) delete p.wrong[h]; } else delete p.learned[h];
-      save(conn.data.id);
+      if (JSON.stringify([p.learned[h], p.wrong?.[h]]) !== before) save(conn.data.id);
       if (known) playedToday(conn.data.id);
       return {};
     },
@@ -224,8 +228,9 @@ export function createCore({ sql, clientId = '', verifyGoogle, now = Date.now })
     missed(conn, h) {
       const id = conn.data.id;
       if (!players[id] || typeof h !== 'string' || !WORD.has(h)) return;
+      const fresh = !players[id].wrong?.[h];
       missed(id, h);
-      save(id);
+      if (fresh) save(id); // a repeat miss only reorders the list; not worth a write
     },
   };
 
@@ -336,6 +341,9 @@ export function createCore({ sql, clientId = '', verifyGoogle, now = Date.now })
     guest: GUEST_OK,
     async message(conn, text) {
       if (typeof text !== 'string' || text.length > MAX_MESSAGE) return;
+      const rate = conn.data.rate ??= { t: now(), n: 0 };
+      if (now() - rate.t > RATE_WINDOW_MS) { rate.t = now(); rate.n = 0; }
+      if (++rate.n > RATE_MAX) return;
       let m;
       try { m = JSON.parse(text); } catch { return; }
       if (!m || typeof m.e !== 'string') return;

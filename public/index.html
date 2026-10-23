@@ -533,7 +533,7 @@ const socket = (() => {
   const fire = (e, a) => (handlers[e] || []).forEach(fn => fn(a));
   function open() {
     ws = new WebSocket(`${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/ws`);
-    ws.onopen = () => { retry = 0; api.connected = true; ping = setInterval(() => ws.send('ping'), 25000); fire('connect'); };
+    ws.onopen = () => { retry = 0; api.connected = true; ping = setInterval(() => ws.readyState === WebSocket.OPEN && ws.send('ping'), 25000); fire('connect'); };
     ws.onmessage = ev => {
       if (ev.data === 'pong') return;
       let m; try { m = JSON.parse(ev.data); } catch { return; }
@@ -553,7 +553,8 @@ const socket = (() => {
     connected: false,
     on(e, fn) { (handlers[e] ||= []).push(fn); },
     emit(e, a, ack) {
-      if (!api.connected) return ack?.({ error: 'Mất kết nối, thử lại nhé' });
+      // readyState, not `connected`: a socket can be closing before onclose has fired.
+      if (ws?.readyState !== WebSocket.OPEN) return ack?.({ error: 'Mất kết nối, thử lại nhé' });
       const msg = { e, a };
       if (ack) acks.set(msg.i = ++seq, ack);
       ws.send(JSON.stringify(msg));
@@ -608,7 +609,8 @@ function signedIn(res) {
   ranks = res.ranks;
   renderMe(res.me);
   $('userChip').hidden = false;
-  home();
+  // A reconnect (network blip, new deploy) keeps drill and flashcards going; a match can't survive it.
+  if (mode !== 'drill' && mode !== 'learn') home();
   if (pendingRoom) {
     const code = pendingRoom;
     pendingRoom = null;
