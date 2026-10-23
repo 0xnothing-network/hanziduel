@@ -71,6 +71,16 @@ test('accounts: guest, resume, bad input, logout, rename, kick on second login',
   assert.ok((await client(core).call('resume', { token: a.token })).error, 'token revoked after logout');
 });
 
+test('seal avatar: only the 12 zodiac characters, shown on the leaderboard', async () => {
+  const core = createCore({ sql: sqlite() });
+  const s = await guest(core, 'tiger');
+  assert.strictEqual(s.me.seal, null);
+  for (const bad of ['猫', '虎虎', '<b>', 1, null]) assert.ok((await s.call('seal', { seal: bad })).error, String(bad));
+  assert.ok((await client(core).call('seal', { seal: '虎' })).error, 'login required');
+  assert.strictEqual((await s.call('seal', { seal: '虎' })).me.seal, '虎');
+  assert.strictEqual((await s.call('leaderboard'))[0].seal, '虎');
+});
+
 test('google login uses the verifier and creates one player per Google account', async () => {
   const verifyGoogle = async t => { if (t !== 'good') throw new Error('bad'); return { sub: '42', name: 'Lan Anh', email: 'lan@example.com' }; };
   const core = createCore({ sql: sqlite(), clientId: 'cid', verifyGoogle });

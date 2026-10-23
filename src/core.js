@@ -15,6 +15,7 @@ const vnDate = t => new Date(t + 7 * 3_600_000).toISOString();
 const dayOf = t => vnDate(t).slice(0, 10);
 const monthOf = t => vnDate(t).slice(0, 7);
 const TOTALS = Object.fromEntries(Object.entries(WORDS).map(([lv, ws]) => [lv, ws.length]));
+const SEALS = [...'鼠牛虎兔龙蛇马羊猴鸡狗猪']; // the 12 zodiac animals, the only avatars on offer
 const MAX_MESSAGE = 10_000; // every client message is tiny; cap it so a client can't push megabytes
 const validLevel = lv => Number.isInteger(lv) && lv >= 1 && lv <= 7;
 const hex = bytes => [...new Uint8Array(bytes)].map(b => b.toString(16).padStart(2, '0')).join('');
@@ -42,7 +43,7 @@ export function createCore({ sql, clientId = '', verifyGoogle, now = Date.now })
     save(id);
   }
   const monthGain = p => p.month?.m === monthOf(now()) ? p.month.gain : 0;
-  const pub = p => ({ pid: p.pid, name: p.name, rating: p.rating, rank: G.rankOf(p.rating).name, hsk: G.rankOf(p.rating).hsk, wins: p.wins, losses: p.losses, streak: streakOf(p), gain: monthGain(p) });
+  const pub = p => ({ pid: p.pid, name: p.name, seal: p.seal || null, rating: p.rating, rank: G.rankOf(p.rating).name, hsk: G.rankOf(p.rating).hsk, wins: p.wins, losses: p.losses, streak: streakOf(p), gain: monthGain(p) });
   // "month": Elo gained this month, only players who played a ranked match in it.
   let boards = {};
   const leaderboard = period => {
@@ -126,6 +127,15 @@ export function createCore({ sql, clientId = '', verifyGoogle, now = Date.now })
       name = typeof name === 'string' ? name.trim().slice(0, 20) : '';
       if (!name) return { error: 'Tên không hợp lệ' };
       p.name = name;
+      save(conn.data.id);
+      boards = {};
+      return { me: pub(p) };
+    },
+    seal(conn, { seal }) {
+      const p = me(conn);
+      if (!p) return { error: 'Chưa đăng nhập' };
+      if (!SEALS.includes(seal)) return { error: 'Con dấu không hợp lệ' };
+      p.seal = seal;
       save(conn.data.id);
       boards = {};
       return { me: pub(p) };

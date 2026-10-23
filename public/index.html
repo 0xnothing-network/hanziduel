@@ -60,6 +60,10 @@ button:disabled { cursor:default; }
 .menu { position:absolute; right:20px; top:72px; z-index:20; min-width:220px; background:var(--sheet); border:1px solid var(--ink); padding:4px 0; }
 .menu button { display:block; width:100%; padding:10px 16px; text-align:left; font-size:15px; }
 .menu button:hover { background:var(--rule2); }
+.seals { display:grid; grid-template-columns:repeat(6, 1fr); gap:4px; padding:0 12px 10px; border-bottom:1px solid var(--rule2); margin-bottom:4px; }
+.menu .seals button { width:auto; padding:6px 0; text-align:center; font:700 18px var(--zh); border:1px solid transparent; border-radius:3px; }
+.menu .seals button[aria-pressed="true"] { background:var(--red); color:var(--redInk); }
+.ledger .seal.sm { display:inline-grid; width:22px; height:22px; font-size:13px; vertical-align:-4px; margin-right:8px; }
 
 /* Type + rules */
 h1, h2, h3 { font-family:var(--serif); font-weight:700; letter-spacing:-.01em; margin:0; }
@@ -279,6 +283,8 @@ footer { font-size:12px; color:var(--mute); padding:28px 0 0; border-top:1px sol
     </div>
   </header>
   <div class="menu" id="menu" role="menu" hidden>
+    <p class="kicker" style="margin:8px 16px 6px">Con dấu của bạn</p>
+    <div class="seals" id="seals" role="group" aria-label="Chọn con dấu"></div>
     <button role="menuitem" id="renameBtn">Đổi tên hiển thị</button>
     <button role="menuitem" id="themeBtn">Giao diện sáng / tối</button>
     <button role="menuitem" id="logoutBtn">Đăng xuất</button>
@@ -466,7 +472,9 @@ function el(tag, props = {}, ...kids) {
   return e;
 }
 const initial = name => (name || '?').trim().charAt(0).toUpperCase();
-function setAvatar(node, name) { node.textContent = initial(name); }
+function setAvatar(node, p) { node.textContent = p.seal || initial(p.name); }
+const SEALS = [...'鼠牛虎兔龙蛇马羊猴鸡狗猪'];
+const SEAL_NAMES = ['Tý', 'Sửu', 'Dần', 'Mão', 'Thìn', 'Tỵ', 'Ngọ', 'Mùi', 'Thân', 'Dậu', 'Tuất', 'Hợi'];
 function toast(msg, ms = 2600) {
   const t = el('div', { className: 'toast', textContent: msg });
   $('toasts').append(t);
@@ -649,7 +657,18 @@ $('renameBtn').onclick = async () => {
 function renderMe(m) {
   me = m;
   const idx = ranks.findIndex(r => r.name === m.rank), cur = ranks[idx], next = ranks[idx + 1];
-  setAvatar($('chipAvatar'), m.name);
+  setAvatar($('chipAvatar'), m);
+  $('seals').replaceChildren(...SEALS.map((s, i) => {
+    const b = el('button', { textContent: s, title: SEAL_NAMES[i], ariaLabel: `Con dấu ${SEAL_NAMES[i]}` });
+    b.setAttribute('aria-pressed', s === m.seal);
+    b.onclick = async e => {
+      e.stopPropagation(); // keep the menu open so the change is visible
+      const r = await call('seal', { seal: s });
+      if (r.error) return toast(r.error);
+      renderMe(r.me); loadBoard();
+    };
+    return b;
+  }));
   $('chipName').textContent = m.name;
   $('chipRank').textContent = `${m.rank} · ${m.rating}`;
   $('rankSeal').textContent = RANK_SEAL[m.rank];
@@ -694,7 +713,7 @@ async function loadBoard() {
   const month = period === 'month';
   $('board').replaceChildren(...(list.length ? list.map((p, i) => el('tr', { className: p.pid === me?.pid ? 'me' : '' },
     el('td', { className: 'n', textContent: i + 1 }),
-    el('td', {}, p.name, el('span', { className: 'rk', textContent: month ? `${p.rank} · ${p.rating}` : p.rank })),
+    el('td', {}, el('span', { className: 'seal sm', textContent: p.seal || initial(p.name) }), p.name, el('span', { className: 'rk', textContent: month ? `${p.rank} · ${p.rating}` : p.rank })),
     el('td', { className: 'r', textContent: month ? `${p.gain > 0 ? '+' : ''}${p.gain}` : p.rating }))) : [el('tr', {}, el('td', { className: 'mute',
       textContent: month ? 'Chưa có trận xếp hạng nào trong tháng này.' : 'Chưa có ai. Hãy là người đầu tiên.' }))]));
 }
@@ -837,8 +856,8 @@ socket.on('start', d => {
   opp = d.opponent;
   review = []; lastScore = 0;
   sfx.found(); vibrate([60, 40, 60]);
-  setAvatar($('vsMeAv'), me.name); $('vsMe').textContent = me.name; $('vsMeElo').textContent = `${me.rank} · ${me.rating}`;
-  setAvatar($('vsOppAv'), opp.name); $('vsOpp').textContent = opp.name; $('vsOppElo').textContent = `${opp.rank} · ${opp.rating}`;
+  setAvatar($('vsMeAv'), me); $('vsMe').textContent = me.name; $('vsMeElo').textContent = `${me.rank} · ${me.rating}`;
+  setAvatar($('vsOppAv'), opp); $('vsOpp').textContent = opp.name; $('vsOppElo').textContent = `${opp.rank} · ${opp.rating}`;
   $('vsHsk').textContent = `${hskRange(d.hsk)} · ${d.rounds} câu` + (d.ranked ? '' : ' · Giao hữu, không tính Elo');
   show('vs');
   let n = 3;
