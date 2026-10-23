@@ -15,7 +15,9 @@ const vnDate = t => new Date(t + 7 * 3_600_000).toISOString();
 const dayOf = t => vnDate(t).slice(0, 10);
 const monthOf = t => vnDate(t).slice(0, 7);
 const TOTALS = Object.fromEntries(Object.entries(WORDS).map(([lv, ws]) => [lv, ws.length]));
-const SEALS = [...'鼠牛虎兔龙蛇马羊猴鸡狗猪']; // the 12 zodiac animals, the only avatars on offer
+const SEALS = [...'子丑寅卯辰巳午未申酉戌亥']; // the 12 earthly branches (Tý…Hợi), the only avatars on offer
+// Seals were briefly the animal characters; show those players their branch instead.
+const BRANCH_OF = Object.fromEntries([...'鼠牛虎兔龙蛇马羊猴鸡狗猪'].map((a, i) => [a, SEALS[i]]));
 const MAX_MESSAGE = 10_000; // every client message is tiny; cap it so a client can't push megabytes
 const validLevel = lv => Number.isInteger(lv) && lv >= 1 && lv <= 7;
 const hex = bytes => [...new Uint8Array(bytes)].map(b => b.toString(16).padStart(2, '0')).join('');
@@ -43,7 +45,7 @@ export function createCore({ sql, clientId = '', verifyGoogle, now = Date.now })
     save(id);
   }
   const monthGain = p => p.month?.m === monthOf(now()) ? p.month.gain : 0;
-  const pub = p => ({ pid: p.pid, name: p.name, seal: p.seal || null, rating: p.rating, rank: G.rankOf(p.rating).name, hsk: G.rankOf(p.rating).hsk, wins: p.wins, losses: p.losses, streak: streakOf(p), gain: monthGain(p) });
+  const pub = p => ({ pid: p.pid, name: p.name, seal: BRANCH_OF[p.seal] || p.seal || null, rating: p.rating, rank: G.rankOf(p.rating).name, hsk: G.rankOf(p.rating).hsk, wins: p.wins, losses: p.losses, streak: streakOf(p), gain: monthGain(p) });
   // "month": Elo gained this month, only players who played a ranked match in it.
   let boards = {};
   const leaderboard = period => {

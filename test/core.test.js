@@ -71,14 +71,19 @@ test('accounts: guest, resume, bad input, logout, rename, kick on second login',
   assert.ok((await client(core).call('resume', { token: a.token })).error, 'token revoked after logout');
 });
 
-test('seal avatar: only the 12 zodiac characters, shown on the leaderboard', async () => {
-  const core = createCore({ sql: sqlite() });
+test('seal avatar: only the 12 earthly branches, shown on the leaderboard', async () => {
+  const sql = sqlite();
+  const core = createCore({ sql });
   const s = await guest(core, 'tiger');
   assert.strictEqual(s.me.seal, null);
-  for (const bad of ['猫', '虎虎', '<b>', 1, null]) assert.ok((await s.call('seal', { seal: bad })).error, String(bad));
-  assert.ok((await client(core).call('seal', { seal: '虎' })).error, 'login required');
-  assert.strictEqual((await s.call('seal', { seal: '虎' })).me.seal, '虎');
-  assert.strictEqual((await s.call('leaderboard'))[0].seal, '虎');
+  for (const bad of ['猫', '虎', '寅寅', '<b>', 1, null]) assert.ok((await s.call('seal', { seal: bad })).error, String(bad));
+  assert.ok((await client(core).call('seal', { seal: '寅' })).error, 'login required');
+  assert.strictEqual((await s.call('seal', { seal: '寅' })).me.seal, '寅');
+  assert.strictEqual((await s.call('leaderboard'))[0].seal, '寅');
+  // A player saved with the old animal seal is shown the matching branch.
+  const row = sql.exec('SELECT data FROM players').toArray()[0];
+  sql.exec('UPDATE players SET data = ?', JSON.stringify({ ...JSON.parse(row.data), seal: '虎' }));
+  assert.strictEqual((await client(createCore({ sql })).call('resume', { token: s.token })).me.seal, '寅');
 });
 
 test('google login uses the verifier and creates one player per Google account', async () => {

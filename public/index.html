@@ -473,8 +473,8 @@ function el(tag, props = {}, ...kids) {
 }
 const initial = name => (name || '?').trim().charAt(0).toUpperCase();
 function setAvatar(node, p) { node.textContent = p.seal || initial(p.name); }
-const SEALS = [...'鼠牛虎兔龙蛇马羊猴鸡狗猪'];
-const SEAL_NAMES = ['Tý', 'Sửu', 'Dần', 'Mão', 'Thìn', 'Tỵ', 'Ngọ', 'Mùi', 'Thân', 'Dậu', 'Tuất', 'Hợi'];
+const SEALS = [...'子丑寅卯辰巳午未申酉戌亥'];
+const SEAL_NAMES = ['Tý (Chuột)', 'Sửu (Trâu)', 'Dần (Hổ)', 'Mão (Thỏ)', 'Thìn (Rồng)', 'Tỵ (Rắn)', 'Ngọ (Ngựa)', 'Mùi (Dê)', 'Thân (Khỉ)', 'Dậu (Gà)', 'Tuất (Chó)', 'Hợi (Lợn)'];
 function toast(msg, ms = 2600) {
   const t = el('div', { className: 'toast', textContent: msg });
   $('toasts').append(t);
