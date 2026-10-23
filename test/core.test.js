@@ -9,7 +9,7 @@ import * as G from '../game.js';
 // node:sqlite behind the Durable Object SQL API shape: sql.exec(query, ...params).toArray()
 function sqlite(file = ':memory:') {
   const db = new DatabaseSync(file);
-  return { db, exec: (q, ...p) => { const st = db.prepare(q); const rows = /^\s*select/i.test(q) ? st.all(...p) : (st.run(...p), []); return { toArray: () => rows }; } };
+  return { db, exec: (q, ...p) => { const st = db.prepare(q); const rows = /^\s*(select|pragma)/i.test(q) ? st.all(...p) : (st.run(...p), []); return { toArray: () => rows }; } };
 }
 const tmpDb = () => path.join(os.tmpdir(), `duel-${process.pid}-${Date.now()}-${Math.random().toString(36).slice(2)}.db`);
 
@@ -150,13 +150,44 @@ test('abuse: per-connection rate limit, repeated writes are skipped', async () =
   const s = await guest(core, 'spammer');
   writes = 0;
   for (let i = 0; i < 50; i++) s.emit('missed', '爱');
-  for (let i = 0; i < 9; i++) await s.call('learned', { h: '八', known: true });
+  for (let i = 0; i < 10; i++) await s.call('learned', { h: '八', known: true });
   assert.strictEqual(writes, 3, 'new miss, new learned word, first play of the day — repeats write nothing');
-  // 60 messages per 10 s per connection: the next one is dropped, never answered.
+  // 60 messages per 10 s per account: the next one is dropped, never answered.
   const dropped = await Promise.race([s.call('me'), new Promise(r => setTimeout(() => r('dropped'), 50))]);
   assert.strictEqual(dropped, 'dropped');
   t += 10_001;
   assert.strictEqual((await s.call('me')).me.name, 'spammer', 'allowed again after the window');
+});
+
+test('abuse: reconnecting does not reset the rate limit', async () => {
+  const core = createCore({ sql: sqlite() });
+  const s = await guest(core, 'hopper');
+  for (let i = 0; i < 60; i++) s.emit('unqueue');
+  const again = client(core); // same account, new socket
+  assert.ok((await again.call('resume', { token: s.token })).me);
+  const dropped = await Promise.race([again.call('me'), new Promise(r => setTimeout(() => r('dropped'), 50))]);
+  assert.strictEqual(dropped, 'dropped', 'the bucket belongs to the account, not the socket');
+});
+
+test('sessions expire after 60 days idle, a visit renews them, old tables are upgraded', async () => {
+  const DAY = 86_400_000;
+  let t = Date.now();
+  const sql = sqlite();
+  // A database from before sessions had a timestamp.
+  sql.exec('CREATE TABLE sessions (token_hash TEXT PRIMARY KEY, player_id TEXT NOT NULL)');
+  const core = createCore({ sql, now: () => t });
+  const s = await guest(core, 'sleeper');
+  t += 59 * DAY;
+  assert.ok((await client(core).call('resume', { token: s.token })).me, 'still valid at 59 days');
+  t += 59 * DAY;
+  assert.ok((await client(core).call('resume', { token: s.token })).me, 'the visit at day 59 renewed it');
+  t += 61 * DAY;
+  assert.match((await client(core).call('resume', { token: s.token })).error, /hết hạn/);
+  assert.strictEqual(sql.exec('SELECT count(*) AS n FROM sessions').toArray()[0].n, 0, 'expired row removed');
+  // Restart on an old-format row with no timestamp: the session survives and gets a fresh 60 days.
+  sql.exec("INSERT INTO sessions (token_hash, player_id) VALUES ('legacy', 'x')");
+  createCore({ sql, now: () => t });
+  assert.strictEqual(sql.exec("SELECT at FROM sessions WHERE token_hash = 'legacy'").toArray()[0].at, t);
 });
 
 test('streak counts consecutive days of any play, in Vietnam time', async () => {

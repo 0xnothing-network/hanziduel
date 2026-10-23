@@ -22,6 +22,8 @@ const MAX_MESSAGE = 10_000; // every client message is tiny; cap it so a client 
 // Normal play sends under 3 messages a second. The cap stops one client from burning the
 // Durable Object's daily write quota (100k rows on the free plan) and taking the game down.
 const RATE_WINDOW_MS = 10_000, RATE_MAX = 60;
+// Sessions expire after 60 days without a visit; a visit renews at most once a day to save writes.
+const SESSION_MS = 60 * DAY_MS, RENEW_MS = DAY_MS;
 const validLevel = lv => Number.isInteger(lv) && lv >= 1 && lv <= 7;
 const hex = bytes => [...new Uint8Array(bytes)].map(b => b.toString(16).padStart(2, '0')).join('');
 const randomHex = n => hex(crypto.getRandomValues(new Uint8Array(n)));
@@ -33,6 +35,10 @@ export function createCore({ sql, clientId = '', verifyGoogle, now = Date.now })
 
   sql.exec('CREATE TABLE IF NOT EXISTS players (id TEXT PRIMARY KEY, data TEXT NOT NULL)');
   sql.exec('CREATE TABLE IF NOT EXISTS sessions (token_hash TEXT PRIMARY KEY, player_id TEXT NOT NULL)');
+  // Sessions got a last-seen time later; older rows start their 60 days now instead of being logged out.
+  if (!sql.exec('PRAGMA table_info(sessions)').toArray().some(c => c.name === 'at')) sql.exec('ALTER TABLE sessions ADD COLUMN at INTEGER');
+  sql.exec('UPDATE sessions SET at = ? WHERE at IS NULL', now());
+  sql.exec('DELETE FROM sessions WHERE at < ?', now() - SESSION_MS);
   // Invites are stored, not kept in memory: the object may hibernate while the host waits for a friend.
   sql.exec('CREATE TABLE IF NOT EXISTS invites (code TEXT PRIMARY KEY, host TEXT NOT NULL, at INTEGER NOT NULL)');
   // All players live in memory (one game server); every change is written through to SQLite at once.
@@ -66,6 +72,8 @@ export function createCore({ sql, clientId = '', verifyGoogle, now = Date.now })
   const emit = (conn, e, a) => conn.send({ e, a });
 
   const online = new Map(); // player id -> conn
+  // Rate buckets follow the account once logged in, so reconnecting doesn't reset the count.
+  const rates = new Map();  // player id or anonymous conn -> { t, n }
   let queue = [];           // { id, since }
 
   // Last tab wins: a new login for the same account kicks the old connection.
@@ -88,7 +96,7 @@ export function createCore({ sql, clientId = '', verifyGoogle, now = Date.now })
   async function newSession(conn, id) {
     const token = btoa(String.fromCharCode(...crypto.getRandomValues(new Uint8Array(32)))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
     save(id);
-    sql.exec('INSERT INTO sessions (token_hash, player_id) VALUES (?, ?)', await sha256(token), id);
+    sql.exec('INSERT INTO sessions (token_hash, player_id, at) VALUES (?, ?, ?)', await sha256(token), id, now());
     attach(conn, id);
     return { token, me: pub(players[id]), ranks: G.RANKS };
   }
@@ -114,8 +122,11 @@ export function createCore({ sql, clientId = '', verifyGoogle, now = Date.now })
       return newSession(conn, id);
     },
     async resume(conn, { token }) {
-      const row = typeof token === 'string' && sql.exec('SELECT player_id FROM sessions WHERE token_hash = ?', await sha256(token)).toArray()[0];
-      if (!row || !players[row.player_id]) return { error: 'Phiên đã hết hạn, hãy đăng nhập lại' };
+      const th = typeof token === 'string' && await sha256(token);
+      const row = th && sql.exec('SELECT player_id, at FROM sessions WHERE token_hash = ?', th).toArray()[0];
+      if (row && row.at < now() - SESSION_MS) sql.exec('DELETE FROM sessions WHERE token_hash = ?', th);
+      if (!row || !players[row.player_id] || row.at < now() - SESSION_MS) return { error: 'Phiên đã hết hạn, hãy đăng nhập lại' };
+      if (row.at < now() - RENEW_MS) sql.exec('UPDATE sessions SET at = ? WHERE token_hash = ?', now(), th);
       attach(conn, row.player_id);
       return { me: pub(players[row.player_id]), ranks: G.RANKS };
     },
@@ -341,9 +352,12 @@ export function createCore({ sql, clientId = '', verifyGoogle, now = Date.now })
     guest: GUEST_OK,
     async message(conn, text) {
       if (typeof text !== 'string' || text.length > MAX_MESSAGE) return;
-      const rate = conn.data.rate ??= { t: now(), n: 0 };
-      if (now() - rate.t > RATE_WINDOW_MS) { rate.t = now(); rate.n = 0; }
+      const key = conn.data.id || conn;
+      let rate = rates.get(key);
+      if (!rate || now() - rate.t > RATE_WINDOW_MS) rates.set(key, rate = { t: now(), n: 0 });
       if (++rate.n > RATE_MAX) return;
+      // shortcut: anonymous buckets are swept only here; fine while the object restarts on every deploy.
+      if (rates.size > 5000) for (const [k, r] of rates) if (now() - r.t > RATE_WINDOW_MS) rates.delete(k);
       let m;
       try { m = JSON.parse(text); } catch { return; }
       if (!m || typeof m.e !== 'string') return;
