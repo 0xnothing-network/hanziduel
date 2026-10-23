@@ -4,7 +4,8 @@
 //   offline; this uses the unmodified CVDICT.u8 kept in github.com/phucbm/xue-hanzi, pinned to a commit.
 // Fields: h hanzi, p pinyin, m short meaning for quiz options (Vietnamese, English fallback),
 //         vi fuller Vietnamese meaning, en English meaning.
-const fs = require('fs');
+import fs from 'node:fs';
+const dataDir = new URL('./data/', import.meta.url);
 const HSK = 'https://raw.githubusercontent.com/drkameleon/complete-hsk-vocabulary/main/wordlists/exclusive/new/';
 const CVDICT = 'https://raw.githubusercontent.com/phucbm/xue-hanzi/c1e7610546454e32db2b3332435902bf78181152/src/data/CVDICT.u8';
 
@@ -76,6 +77,6 @@ function vietnamese(dict, simp, numeric) {
     console.log(`HSK ${lv}: ${out[lv].length} words`);
   }
   console.log(`Vietnamese: no entry ${missing} (English fallback), reading mismatch ${fuzzy}`);
-  fs.mkdirSync(__dirname + '/data', { recursive: true });
-  fs.writeFileSync(__dirname + '/data/words.json', JSON.stringify(out));
+  fs.mkdirSync(dataDir, { recursive: true });
+  fs.writeFileSync(new URL('words.json', dataDir), JSON.stringify(out));
 })();

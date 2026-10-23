@@ -50,4 +50,4 @@ function makeQuestion(words, maxLevel, minLevel = 1, rand = Math.random) {
   return { type: t.type, level, prompt: word[t.ask], options, answer: options.indexOf(word[t.show]), word };
 }
 
-module.exports = { RANKS, START_RATING, ROUNDS, ROUND_MS, rankOf, elo, points, makeQuestion };
+export { RANKS, START_RATING, ROUNDS, ROUND_MS, rankOf, elo, points, makeQuestion };

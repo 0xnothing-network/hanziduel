@@ -1,22 +1,17 @@
 {
   "name": "hanziduel",
   "private": true,
+  "type": "module",
   "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
     "words": "node build-words.js",
-    "start": "node --env-file-if-exists=.env server.js",
     "test": "node --test"
   },
   "engines": {
-    "node": ">=20"
-  },
-  "dependencies": {
-    "google-auth-library": "^11.3.1",
-    "pg": "^8.23.1",
-    "socket.io": "^4.8.1"
+    "node": ">=22"
   },
   "devDependencies": {
-    "@electric-sql/pglite": "^0.5.11",
-    "@electric-sql/pglite-socket": "^0.2.14",
-    "socket.io-client": "^4.8.1"
+    "wrangler": "^4.152.0"
   }
 }

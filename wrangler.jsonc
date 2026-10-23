@@ -1,0 +1,20 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "hanziduel",
+  "main": "src/worker.js",
+  "compatibility_date": "2026-09-01",
+  "assets": {
+    "directory": "public",
+    "binding": "ASSETS",
+    // The worker runs first only where it adds something: the page (client id) and the game socket.
+    "run_worker_first": ["/", "/ws"]
+  },
+  "durable_objects": {
+    "bindings": [{ "name": "GAME", "class_name": "Game" }]
+  },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["Game"] }],
+  // Public value (it is sent to every browser). Override with GOOGLE_CLIENT_ID= in .dev.vars for guest login locally.
+  "vars": { "GOOGLE_CLIENT_ID": "494956478539-3ps46k1aeujqrbvo8l8be4jcla5pr6i6.apps.googleusercontent.com" },
+  "observability": { "enabled": true },
+  "dev": { "port": 3000 }
+}

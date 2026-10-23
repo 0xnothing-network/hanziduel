@@ -1,7 +1,7 @@
-const test = require('node:test');
-const assert = require('node:assert');
-const G = require('../game');
-const WORDS = require('../data/words.json');
+import test from 'node:test';
+import assert from 'node:assert';
+import * as G from '../game.js';
+import WORDS from '../data/words.json' with { type: 'json' };
 
 test('rank unlocks HSK by rating', () => {
   assert.strictEqual(G.rankOf(0).hsk, 1);

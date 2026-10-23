@@ -423,7 +423,6 @@ footer { font-size:12px; color:var(--mute); padding:28px 0 0; border-top:1px sol
 </main>
 <div id="toasts" aria-live="polite"></div>
 
-<script src="/socket.io/socket.io.min.js"></script>
 <script>
 'use strict';
 const CLIENT_ID = '%GOOGLE_CLIENT_ID%';
@@ -500,9 +499,46 @@ $('themeBtn').onclick = () => {
 applyTheme();
 
 /* ---------- Socket ---------- */
-// WebSocket first (one round trip less behind Cloudflare), falling back to long-polling if blocked.
-const socket = io({ transports: ['websocket', 'polling'], tryAllTransports: true });
-const call = (ev, arg = {}) => new Promise(resolve => socket.timeout(8000).emit(ev, arg, (err, res) => resolve(err ? { error: 'Mạng chậm, thử lại nhé' } : res)));
+// Plain WebSocket to the game's Durable Object: { e, a, i } frames, acks matched by id, auto-reconnect with backoff.
+const socket = (() => {
+  const handlers = {}, acks = new Map();
+  let ws = null, seq = 0, retry = 0, ping = null;
+  const fire = (e, a) => (handlers[e] || []).forEach(fn => fn(a));
+  function open() {
+    ws = new WebSocket(`${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/ws`);
+    ws.onopen = () => { retry = 0; api.connected = true; ping = setInterval(() => ws.send('ping'), 25000); fire('connect'); };
+    ws.onmessage = ev => {
+      if (ev.data === 'pong') return;
+      let m; try { m = JSON.parse(ev.data); } catch { return; }
+      if (m.i) { acks.get(m.i)?.(m.a); acks.delete(m.i); } else fire(m.e, m.a);
+    };
+    ws.onclose = () => {
+      clearInterval(ping);
+      const was = api.connected;
+      api.connected = false;
+      for (const done of acks.values()) done({ error: 'Mất kết nối, thử lại nhé' });
+      acks.clear();
+      if (was) fire('disconnect');
+      setTimeout(open, Math.min(5000, 500 * 2 ** retry++));
+    };
+  }
+  const api = {
+    connected: false,
+    on(e, fn) { (handlers[e] ||= []).push(fn); },
+    emit(e, a, ack) {
+      if (!api.connected) return ack?.({ error: 'Mất kết nối, thử lại nhé' });
+      const msg = { e, a };
+      if (ack) acks.set(msg.i = ++seq, ack);
+      ws.send(JSON.stringify(msg));
+    },
+  };
+  queueMicrotask(open);
+  return api;
+})();
+const call = (ev, arg = {}) => new Promise(resolve => {
+  const t = setTimeout(() => resolve({ error: 'Mạng chậm, thử lại nhé' }), 8000);
+  socket.emit(ev, arg, res => { clearTimeout(t); resolve(res); });
+});
 
 let ranks = [], me = null, mode = null;
 
@@ -552,7 +588,7 @@ socket.on('connect', async () => {
   const res = await call('resume', { token });
   if (res.error) { store.set('token', null); showLogin(res.error); } else signedIn(res);
 });
-socket.on('disconnect', reason => { if (reason !== 'io client disconnect') toast('Đang kết nối lại…'); });
+socket.on('disconnect', () => toast('Đang kết nối lại…'));
 socket.on('kicked', () => { store.set('token', null); showLogin('Tài khoản vừa đăng nhập ở tab hoặc thiết bị khác.'); });
 $('guestBtn').onclick = async () => {
   $('guestBtn').disabled = true;
