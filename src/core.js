@@ -282,7 +282,7 @@ export function createCore({ sql, clientId = '', verifyGoogle, now = Date.now })
     await waiting;
 
     for (let n = 1; n <= G.ROUNDS && !forfeiter; n++) {
-      const q = G.makeQuestion(WORDS, hsk);
+      const q = G.makeQuestion(WORDS, hsk, 1, Math.random, G.PVP_TYPES);
       picks = {};
       waiting = arm(G.ROUND_MS + 500);
       sentAt = Date.now();

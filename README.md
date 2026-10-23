@@ -2,7 +2,7 @@
 
 Web đấu từ vựng tiếng Trung **HSK 3.0** realtime, chạy trên **Cloudflare Workers** tại https://hanziduel.com.
 
-Câu hỏi có 3 dạng, trộn ngẫu nhiên cả trong PvP lẫn luyện phản xạ:
+Câu hỏi có 3 dạng. Luyện phản xạ trộn cả 3; PvP chỉ dùng 2 dạng đầu, vì dạng nghe gây bất lợi cho người không có loa hoặc giọng đọc tiếng Trung:
 - **Hán → Việt**: nhìn chữ Hán, chọn nghĩa tiếng Việt.
 - **Việt → Hán**: nhìn nghĩa tiếng Việt, chọn chữ Hán.
 - **Nghe → nghĩa**: nghe phát âm, chọn nghĩa tiếng Việt. Dạng này không phải "nghe → chọn chữ", vì chữ được đọc phải gửi xuống trình duyệt, nên nếu đáp án là chữ Hán thì người chơi tự thấy ngay đáp án. Máy nào không có giọng đọc tiếng Trung sẽ hiện pinyin thay thế.

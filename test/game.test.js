@@ -62,4 +62,5 @@ test('questions: three types, level range respected, 4 distinct options with one
     assert.strictEqual(G.makeQuestion(WORDS, max, max).level, max);
   }
   assert.deepStrictEqual([...seen].sort(), ['Hán → Việt', 'Nghe → nghĩa', 'Việt → Hán']);
+  for (let i = 0; i < 300; i++) assert.ok(!G.makeQuestion(WORDS, 3, 1, Math.random, G.PVP_TYPES).listen, 'PvP types exclude listening');
 });

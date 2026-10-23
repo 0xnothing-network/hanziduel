@@ -34,13 +34,15 @@ const TYPES = [
   { type: 'Việt → Hán', ask: 'm', show: 'h' },
   { type: 'Nghe → nghĩa', ask: 'h', show: 'm', listen: true },
 ];
+// No listening in PvP: a player without sound or a Chinese voice would be at a disadvantage.
+const PVP_TYPES = TYPES.filter(t => !t.listen);
 
 // Half the questions come from maxLevel, the rest from minLevel..maxLevel-1.
-function makeQuestion(words, maxLevel, minLevel = 1, rand = Math.random) {
+function makeQuestion(words, maxLevel, minLevel = 1, rand = Math.random, types = TYPES) {
   const level = maxLevel === minLevel || rand() < 0.5 ? maxLevel : minLevel + Math.floor(rand() * (maxLevel - minLevel));
   const pool = words[level];
   const word = pool[Math.floor(rand() * pool.length)];
-  const t = TYPES[Math.floor(rand() * TYPES.length)];
+  const t = types[Math.floor(rand() * types.length)];
   const options = [word[t.show]];
   for (let tries = 0; options.length < 4 && tries < 200; tries++) {
     const w = pool[Math.floor(rand() * pool.length)];
@@ -54,4 +56,4 @@ function makeQuestion(words, maxLevel, minLevel = 1, rand = Math.random) {
   return { type: t.type, listen: !!t.listen, hint: t.listen ? word.p : undefined, level, prompt: word[t.ask], options, answer: options.indexOf(word[t.show]), word };
 }
 
-export { RANKS, START_RATING, ROUNDS, ROUND_MS, rankOf, elo, points, makeQuestion };
+export { RANKS, START_RATING, ROUNDS, ROUND_MS, PVP_TYPES, rankOf, elo, points, makeQuestion };

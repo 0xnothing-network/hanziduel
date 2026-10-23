@@ -231,6 +231,7 @@ test('pvp: full match, answers validated, elo applied and persisted', { timeout:
   a.on('question', q => {
     questions++;
     assert.ok(!('answer' in q) && !('word' in q), 'answer must not be sent during the round');
+    assert.ok(!q.listen && q.type !== 'Nghe → nghĩa', 'no listening questions in PvP');
     a.emit('answer', 0);
   });
   b.on('question', () => { for (const junk of [7, -1, '1', 1.5, null]) b.emit('answer', junk); b.emit('answer', 1); b.emit('answer', 0); });
