@@ -27,9 +27,12 @@ function elo(ra, rb, scoreA, k = 32) {
 const points = (correct, msLeft) =>
   correct ? 50 + Math.round(50 * Math.max(0, Math.min(msLeft, ROUND_MS)) / ROUND_MS) : 0;
 
-// Only Hanzi → Vietnamese meaning, per product decision.
+// Listening asks for the meaning, not the character: the spoken hanzi has to reach the browser,
+// so "listen → pick the character" would hand every player the answer.
 const TYPES = [
   { type: 'Hán → Việt', ask: 'h', show: 'm' },
+  { type: 'Việt → Hán', ask: 'm', show: 'h' },
+  { type: 'Nghe → nghĩa', ask: 'h', show: 'm', listen: true },
 ];
 
 // Half the questions come from maxLevel, the rest from minLevel..maxLevel-1.
@@ -47,7 +50,8 @@ function makeQuestion(words, maxLevel, minLevel = 1, rand = Math.random) {
     const j = Math.floor(rand() * (i + 1));
     [options[i], options[j]] = [options[j], options[i]];
   }
-  return { type: t.type, level, prompt: word[t.ask], options, answer: options.indexOf(word[t.show]), word };
+  // hint: pinyin, shown only when the browser has no Chinese voice.
+  return { type: t.type, listen: !!t.listen, hint: t.listen ? word.p : undefined, level, prompt: word[t.ask], options, answer: options.indexOf(word[t.show]), word };
 }
 
 export { RANKS, START_RATING, ROUNDS, ROUND_MS, rankOf, elo, points, makeQuestion };

@@ -155,6 +155,21 @@ details[open] summary { margin-bottom:10px; }
     linear-gradient(-45deg, transparent calc(50% - .5px), color-mix(in srgb, var(--red) 22%, transparent) calc(50% - .5px), color-mix(in srgb, var(--red) 22%, transparent) calc(50% + .5px), transparent calc(50% + .5px)),
     var(--sheet); }
 .mi .ch { font:700 calc(var(--s) * .72)/1 var(--zh); color:var(--ink); }
+.mi.say { --s:auto; width:auto; height:auto; min-height:130px; padding:22px 26px; background:var(--sheet); border:1.5px solid var(--ink); }
+.mi.say .ch { font:600 clamp(22px, 5.5vw, 30px)/1.35 var(--serif); text-align:center; }
+.mi.listen .ch { font-size:16px; display:grid; justify-items:center; gap:8px; }
+.play { width:92px; height:92px; display:grid; place-items:center; border-radius:50%; background:var(--red); color:var(--redInk); }
+.play:hover { background:var(--ink); color:var(--paper); }
+.play .icon { width:42px; height:42px; }
+.hintpy { font:500 18px var(--serif); color:var(--ink2); }
+.opt .zhopt { font:700 26px/1.1 var(--zh); }
+.streak { font-size:13px; font-weight:600; color:var(--red); margin-top:4px; }
+.streak.off { color:var(--mute); font-weight:400; }
+.streak i { font:700 15px var(--zh); font-style:normal; }
+.periods { display:flex; gap:14px; }
+.periods .btn.text { font-size:13px; color:var(--mute); text-decoration:none; }
+.periods .btn.text[aria-pressed="true"] { color:var(--ink); text-decoration:underline; text-decoration-color:var(--red); text-decoration-thickness:2px; }
+#findHint { overflow-wrap:anywhere; }
 .mi.wide { --s:auto; width:auto; min-width:min(190px, 46vw); height:min(190px, 46vw); padding:0 18px; background:var(--sheet); }
 .mi.wide .ch { font-size:min(110px, 24vw); letter-spacing:.04em; }
 .mi.wide.xl .ch { font-size:min(76px, 15vw); }
@@ -312,16 +327,19 @@ footer { font-size:12px; color:var(--mute); padding:28px 0 0; border-top:1px sol
             <p class="kicker">Thứ hạng của bạn</p>
             <div class="rank"><span class="seal sm" id="rankSeal"></span><span id="rankName"></span></div>
             <div class="mute" id="record" style="margin-top:6px"></div>
+            <div class="streak" id="streak"></div>
           </div>
           <div style="text-align:right"><div class="elo" id="elo">0</div><div class="mute">Elo</div></div>
         </div>
         <div class="meter"><div id="rankProgress" style="width:0"></div></div>
         <div class="rowx mute" style="font-size:13px"><span id="nextRank"></span><span id="hskRange"></span></div>
         <button class="btn red block lg" id="findBtn" style="margin-top:22px">Tìm trận</button>
+        <button class="btn block" id="inviteBtn" style="margin-top:10px">Mời bạn đấu giao hữu</button>
         <p class="hint" id="findHint">10 câu · 10 giây mỗi câu · đúng và nhanh được nhiều điểm hơn</p>
       </div>
       <div class="section">
-        <div class="rowx"><p class="kicker" style="margin:0">Bảng xếp hạng</p><button class="btn text" id="refreshBoard" style="font-size:13px">Làm mới</button></div>
+        <div class="rowx"><p class="kicker" style="margin:0">Bảng xếp hạng</p>
+          <span class="periods"><button class="btn text" data-period="month">Tháng này</button><button class="btn text" data-period="all">Mọi thời đại</button></span></div>
         <table class="ledger" id="board" aria-label="Bảng xếp hạng"></table>
       </div>
       <div class="section">
@@ -345,6 +363,7 @@ footer { font-size:12px; color:var(--mute); padding:28px 0 0; border-top:1px sol
         <div class="levels" id="learnLevels" role="group" aria-label="Cấp HSK"></div>
         <p class="mute" id="learnStat" style="margin:-6px 0 16px"></p>
         <button class="btn red block lg" id="learnStart">Học</button>
+        <button class="btn block" id="reviewStart" style="margin-top:10px">Ôn từ đã sai</button>
       </div>
     </div>
   </section>
@@ -567,17 +586,26 @@ function showLogin(err = '') {
   me = null;
   $('userChip').hidden = true;
   $('loginErr').textContent = err;
+  if (!err && pendingRoom) $('loginErr').textContent = 'Bạn được mời đấu giao hữu — đăng nhập để vào trận.';
   show('login');
   $('gbtn').hidden = !CLIENT_ID;
   if (CLIENT_ID) { loadGis(); renderGoogleButton(); }
   else { $('guest').hidden = false; $('nameInput').focus(); }
 }
+// ?room=CODE from an invite link; taken off the URL so a reload doesn't rejoin.
+let pendingRoom = new URLSearchParams(location.search).get('room');
+if (pendingRoom) history.replaceState(null, '', location.pathname);
 function signedIn(res) {
   if (res.token) store.set('token', res.token);
   ranks = res.ranks;
   renderMe(res.me);
   $('userChip').hidden = false;
   home();
+  if (pendingRoom) {
+    const code = pendingRoom;
+    pendingRoom = null;
+    call('join', { code }).then(r => r.error && toast(r.error));
+  }
 }
 let everConnected = false;
 socket.on('connect', async () => {
@@ -628,6 +656,8 @@ function renderMe(m) {
   $('rankName').textContent = m.rank;
   $('elo').textContent = m.rating;
   $('record').textContent = `${m.wins} thắng · ${m.losses} thua`;
+  $('streak').className = 'streak' + (m.streak ? '' : ' off');
+  $('streak').replaceChildren(...(m.streak ? [el('i', { textContent: '火' }), ` Chuỗi ${m.streak} ngày`] : ['Chơi mỗi ngày để giữ chuỗi']));
   $('hskRange').textContent = hskRange(m.hsk);
   $('nextRank').textContent = next ? `Còn ${next.min - m.rating} Elo lên ${next.name} · mở ${hskLabel(next.hsk)}` : 'Rank cao nhất';
   // Đồng spans 0–1099 but everyone starts at 1000, so measure each rank as the band just below the next one.
@@ -654,16 +684,21 @@ function home() {
   loadBoard();
   renderDrillLevels();
   renderLearnLevels();
+  call('me').then(r => !r.error && renderMe(r.me)); // streak may have changed while playing
 }
+let period = store.get('period') === 'all' ? 'all' : 'month';
 async function loadBoard() {
-  const list = await call('leaderboard');
+  document.querySelectorAll('[data-period]').forEach(b => b.setAttribute('aria-pressed', b.dataset.period === period));
+  const list = await call('leaderboard', { period });
   if (!Array.isArray(list)) return;
+  const month = period === 'month';
   $('board').replaceChildren(...(list.length ? list.map((p, i) => el('tr', { className: p.pid === me?.pid ? 'me' : '' },
     el('td', { className: 'n', textContent: i + 1 }),
-    el('td', {}, p.name, el('span', { className: 'rk', textContent: p.rank })),
-    el('td', { className: 'r', textContent: p.rating }))) : [el('tr', {}, el('td', { className: 'mute', textContent: 'Chưa có ai. Hãy là người đầu tiên.' }))]));
+    el('td', {}, p.name, el('span', { className: 'rk', textContent: month ? `${p.rank} · ${p.rating}` : p.rank })),
+    el('td', { className: 'r', textContent: month ? `${p.gain > 0 ? '+' : ''}${p.gain}` : p.rating }))) : [el('tr', {}, el('td', { className: 'mute',
+      textContent: month ? 'Chưa có trận xếp hạng nào trong tháng này.' : 'Chưa có ai. Hãy là người đầu tiên.' }))]));
 }
-$('refreshBoard').onclick = loadBoard;
+document.querySelectorAll('[data-period]').forEach(b => b.onclick = () => { period = b.dataset.period; store.set('period', period); loadBoard(); });
 
 function levelButtons(boxId, key, render) {
   const cur = +store.get(key) || 1;
@@ -687,7 +722,11 @@ function renderLearnStat() {
 }
 async function loadProgress() {
   const res = await call('progress');
-  if (!res.error) { progress = res; renderLearnLevels(); }
+  if (res.error) return;
+  progress = res;
+  renderLearnLevels();
+  $('reviewStart').disabled = !res.wrong;
+  $('reviewStart').textContent = res.wrong ? `Ôn ${res.wrong} từ đã sai` : 'Chưa có từ sai để ôn';
 }
 
 /* ---------- Matchmaking ---------- */
@@ -714,19 +753,41 @@ function startSearch() {
   searchTimer = setInterval(tickSearch, 1000);
 }
 $('findBtn').onclick = () => searching ? stopSearch() : startSearch();
+$('inviteBtn').onclick = async () => {
+  const r = await call('invite');
+  if (r.error) return toast(r.error);
+  const link = `${location.origin}/?room=${r.code}`;
+  $('findHint').textContent = `Gửi link này cho bạn bè (hết hạn sau 15 phút, giữ trang này mở): ${link}`;
+  try {
+    if (navigator.share) await navigator.share({ title: 'HanziDuel', text: `${me.name} mời bạn đấu từ vựng tiếng Trung`, url: link });
+    else { await navigator.clipboard.writeText(link); toast('Đã sao chép link mời.'); }
+  } catch {} // share sheet closed or clipboard blocked: the link is still on screen
+};
 
 /* ---------- Shared question UI ---------- */
-let pickFn = null, clockTimer = null;
+let pickFn = null, clockTimer = null, listenText = null;
 function renderQuestion(q, onPick) {
   $('qType').textContent = `${q.type} · ${hskLabel(q.level)}`;
-  const box = $('miBox');
-  $('prompt').textContent = q.prompt;
-  box.className = 'mi' + (q.prompt.length > 1 ? ' wide' : '') + (q.prompt.length > 3 ? ' xl' : '');
+  const box = $('miBox'), p = $('prompt'), toHan = q.type === 'Việt → Hán';
+  listenText = q.listen ? q.prompt : null;
+  p.lang = toHan ? 'vi' : 'zh';
+  if (q.listen) {
+    const play = el('button', { className: 'play', ariaLabel: 'Nghe lại (R)', title: 'Nghe lại (R)' });
+    play.innerHTML = ICON.on;
+    play.onclick = () => speak(q.prompt);
+    // Without a Chinese voice the question is unanswerable by ear, so fall back to pinyin.
+    p.replaceChildren(play, zhVoice ? el('span', { className: 'mute', textContent: 'Nghe lại: phím R' }) : el('span', { className: 'hintpy', textContent: q.hint }));
+    box.className = 'mi listen';
+    speak(q.prompt);
+  } else {
+    p.textContent = q.prompt;
+    box.className = toHan ? 'mi say' : 'mi' + (q.prompt.length > 1 ? ' wide' : '') + (q.prompt.length > 3 ? ' xl' : '');
+  }
   void box.offsetWidth; box.classList.add('ink');
   $('reveal').replaceChildren();
   pickFn = onPick;
   $('opts').replaceChildren(...q.options.map((o, i) => {
-    const b = el('button', { className: 'opt' }, el('span', { className: 'k', textContent: i + 1 }), el('span', { textContent: o }));
+    const b = el('button', { className: 'opt' }, el('span', { className: 'k', textContent: i + 1 }), el('span', toHan ? { className: 'zhopt', lang: 'zh', textContent: o } : { textContent: o }));
     b.onclick = () => pick(i);
     return b;
   }));
@@ -778,7 +839,7 @@ socket.on('start', d => {
   sfx.found(); vibrate([60, 40, 60]);
   setAvatar($('vsMeAv'), me.name); $('vsMe').textContent = me.name; $('vsMeElo').textContent = `${me.rank} · ${me.rating}`;
   setAvatar($('vsOppAv'), opp.name); $('vsOpp').textContent = opp.name; $('vsOppElo').textContent = `${opp.rank} · ${opp.rating}`;
-  $('vsHsk').textContent = `${hskRange(d.hsk)} · ${d.rounds} câu`;
+  $('vsHsk').textContent = `${hskRange(d.hsk)} · ${d.rounds} câu` + (d.ranked ? '' : ' · Giao hữu, không tính Elo');
   show('vs');
   let n = 3;
   $('countdown').textContent = n;
@@ -841,9 +902,10 @@ socket.on('end', d => {
   stampVerdict(win ? '胜' : draw ? '和' : '负', !win && !draw);
   $('endTitle').textContent = win ? 'Thắng' : draw ? 'Hoà' : 'Thua';
   $('endSub').textContent = (d.forfeit ? (d.left ? 'Bạn đã rời trận. ' : 'Đối thủ đã rời trận. ') : '') + `${d.score} – ${d.oppScore} điểm`;
-  countUp($('endDelta'), d.delta, v => `${v >= 0 ? '+' : ''}${v} Elo · ${d.me.rating} · ${d.me.rank}`);
+  if (d.ranked) countUp($('endDelta'), d.delta, v => `${v >= 0 ? '+' : ''}${v} Elo · ${d.me.rating} · ${d.me.rank}`);
+  else $('endDelta').textContent = 'Trận giao hữu · không tính Elo';
   $('endDelta').style.color = d.delta > 0 ? 'var(--jade)' : d.delta < 0 ? 'var(--red)' : '';
-  $('againPlayBtn').textContent = 'Đấu tiếp';
+  $('againPlayBtn').textContent = d.ranked ? 'Đấu tiếp' : 'Tìm trận xếp hạng';
   renderReview(review);
   show('end');
   if (win) { sfx.win(); vibrate([80, 50, 80, 50, 160]); } else if (!draw) sfx.lose();
@@ -908,6 +970,7 @@ async function nextDrill() {
     } else {
       drill.streak = 0;
       drill.wrong.push(q.word);
+      socket.emit('missed', q.word.h);
       sfx.bad(); vibrate([40, 30, 40]);
       markAnswer(q.answer, i);
       showWord(q.word);
@@ -957,15 +1020,22 @@ $('learnStart').onclick = async () => {
   $('cardsLevel').textContent = hskLabel(learn.level);
   if (await loadDeck()) show('cards');
 };
+$('reviewStart').onclick = async () => {
+  stopSearch();
+  learn = { review: true, deck: [] };
+  mode = 'learn';
+  $('cardsLevel').textContent = 'Ôn từ đã sai';
+  if (await loadDeck()) show('cards');
+};
 async function loadDeck() {
-  const res = await call('learn', { level: learn.level });
+  const res = await call(learn.review ? 'review' : 'learn', learn.review ? {} : { level: learn.level });
   if (res.error) { toast(res.error); return false; }
-  Object.assign(learn, { deck: res.words, learned: res.learned, total: res.total });
+  Object.assign(learn, learn.review ? { deck: res.words, left: res.total } : { deck: res.words, learned: res.learned, total: res.total });
   if (!learn.deck.length) {
     mode = 'end-learn';
     stampVerdict('毕', false);
     $('endTitle').textContent = 'Hoàn thành';
-    $('endSub').textContent = `Bạn đã thuộc hết ${res.total} từ ${hskLabel(learn.level)}.`;
+    $('endSub').textContent = learn.review ? 'Không còn từ sai nào để ôn.' : `Bạn đã thuộc hết ${res.total} từ ${hskLabel(learn.level)}.`;
     $('endDelta').textContent = ''; $('againPlayBtn').textContent = 'Về sảnh';
     renderReview([]); show('end'); sfx.win();
     return false;
@@ -976,9 +1046,9 @@ async function loadDeck() {
 function showCard() {
   const w = learn.deck[0];
   $('flip').classList.remove('on');
-  $('cardsProg').textContent = `Đã thuộc ${learn.learned} / ${learn.total}`;
+  $('cardsProg').textContent = learn.review ? `Còn ${learn.left} từ cần ôn` : `Đã thuộc ${learn.learned} / ${learn.total}`;
   $('cardsLeft').textContent = `Còn ${learn.deck.length} thẻ trong lượt`;
-  $('cardsBar').style.width = `${learn.learned / learn.total * 100}%`;
+  $('cardsBar').style.width = learn.review ? '0' : `${learn.learned / learn.total * 100}%`;
   $('fHz').textContent = $('bHz').textContent = w.h;
   $('fBox').className = 'mi' + (w.h.length > 1 ? ' wide' : '') + (w.h.length > 3 ? ' xl' : '');
   $('bPy').textContent = w.p;
@@ -996,6 +1066,7 @@ function rate(known) {
   const w = learn.deck.shift();
   if (known) {
     learn.learned++;
+    learn.left--;
     call('learned', { h: w.h, known: true }).then(r => r.error && toast(r.error));
     sfx.ok(); vibrate(15);
   } else {
@@ -1014,6 +1085,7 @@ $('cardsExit').onclick = () => { home(); tab('learn'); };
 document.addEventListener('keydown', e => {
   if (e.target.matches('input, textarea')) return;
   if (!$('game').hidden && pickFn && e.key >= '1' && e.key <= '4') { e.preventDefault(); pick(+e.key - 1); }
+  if (!$('game').hidden && listenText && e.key.toLowerCase() === 'r') speak(listenText);
   if (!$('cards').hidden) {
     if (e.key === ' ') { e.preventDefault(); flip(); }
     else if (e.key === '1' || e.key === '2') rate(e.key === '2');

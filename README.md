@@ -1,10 +1,20 @@
 # HanziDuel · 汉字对决
 
-Web đấu từ vựng tiếng Trung **HSK 3.0** realtime. Mọi câu hỏi đều theo dạng **Hán → Việt**: nhìn chữ Hán và chọn nghĩa tiếng Việt đúng. Chạy trên **Cloudflare Workers** tại https://hanziduel.com.
+Web đấu từ vựng tiếng Trung **HSK 3.0** realtime, chạy trên **Cloudflare Workers** tại https://hanziduel.com.
 
+Câu hỏi có 3 dạng, trộn ngẫu nhiên cả trong PvP lẫn luyện phản xạ:
+- **Hán → Việt**: nhìn chữ Hán, chọn nghĩa tiếng Việt.
+- **Việt → Hán**: nhìn nghĩa tiếng Việt, chọn chữ Hán.
+- **Nghe → nghĩa**: nghe phát âm, chọn nghĩa tiếng Việt. Dạng này không phải "nghe → chọn chữ", vì chữ được đọc phải gửi xuống trình duyệt, nên nếu đáp án là chữ Hán thì người chơi tự thấy ngay đáp án. Máy nào không có giọng đọc tiếng Trung sẽ hiện pinyin thay thế.
+
+Các chế độ chơi:
 - **PvP xếp hạng**: ghép trận theo Elo. Mỗi trận 10 câu, mỗi câu 10 giây; đúng và nhanh thì được nhiều điểm hơn. Rank càng cao thì từ càng khó: Đồng chỉ có HSK 1, Đại Sư có đến HSK 7–9.
+- **Mời bạn đấu giao hữu**: tạo link `hanziduel.com/?room=…`, có hiệu lực 15 phút. Trận giao hữu **không tính Elo**, để không ai tự mời tài khoản phụ của mình mà dồn điểm.
+- **Bảng xếp hạng**: có hai bảng, **Tháng này** (số Elo kiếm được trong tháng, tự đặt lại đầu mỗi tháng theo giờ Việt Nam) và **Mọi thời đại**.
+- **Chuỗi ngày**: đếm số ngày liên tiếp có chơi, tính cả PvP, luyện phản xạ và học từ. Không tính riêng PvP, vì lúc ít người online thì chuỗi sẽ đứt chỉ do không ghép được trận.
 - **Luyện phản xạ 60 giây**: chọn cấp HSK, có chuỗi đúng liên tiếp và lưu kỷ lục, không ảnh hưởng rank.
 - **Học từ mới**: thẻ lật có pinyin, nghĩa và phát âm. Tiến độ lưu theo tài khoản.
+- **Ôn từ đã sai**: lưu những từ trả lời sai trong PvP và luyện phản xạ. Đánh dấu "Đã thuộc" thì từ đó được bỏ khỏi danh sách ôn.
 - **Đăng nhập Google**, giao diện sáng/tối, chơi được trên điện thoại.
 
 ## Kiến trúc

@@ -40,15 +40,26 @@ test('every word has a meaning, almost all in Vietnamese', () => {
   assert.strictEqual(find('国').m, 'quốc gia');
 });
 
-test('questions: only Hán → Việt, level range respected, 4 distinct options with one answer', () => {
+test('questions: three types, level range respected, 4 distinct options with one answer', () => {
+  const seen = new Set();
   for (let i = 0; i < 2000; i++) {
     const max = 1 + (i % 7);
     const q = G.makeQuestion(WORDS, max);
-    assert.strictEqual(q.type, 'Hán → Việt');
-    assert.strictEqual(q.prompt, q.word.h);
+    seen.add(q.type);
+    if (q.type === 'Việt → Hán') {
+      assert.strictEqual(q.prompt, q.word.m);
+      assert.strictEqual(q.options[q.answer], q.word.h);
+      // No other option may share the asked meaning, or two answers would be right.
+      assert.ok(q.options.every((o, k) => k === q.answer || Object.values(WORDS).flat().find(w => w.h === o)?.m !== q.word.m));
+    } else {
+      assert.strictEqual(q.prompt, q.word.h);
+      assert.strictEqual(q.options[q.answer], q.word.m);
+      assert.strictEqual(q.listen, q.type === 'Nghe → nghĩa');
+      assert.strictEqual(q.hint, q.listen ? q.word.p : undefined);
+    }
     assert.ok(q.level >= 1 && q.level <= max);
     assert.strictEqual(new Set(q.options).size, 4);
-    assert.strictEqual(q.options[q.answer], q.word.m);
     assert.strictEqual(G.makeQuestion(WORDS, max, max).level, max);
   }
+  assert.deepStrictEqual([...seen].sort(), ['Hán → Việt', 'Nghe → nghĩa', 'Việt → Hán']);
 });

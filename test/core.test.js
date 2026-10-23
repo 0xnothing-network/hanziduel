@@ -106,7 +106,98 @@ test('learn, progress and practice', async () => {
   }
   const q = await s.call('practice', { level: 7 });
   assert.strictEqual(q.level, 7);
-  assert.strictEqual(q.type, 'Hán → Việt');
+  assert.ok(['Hán → Việt', 'Việt → Hán', 'Nghe → nghĩa'].includes(q.type));
+});
+
+test('wrong words: drill misses are reviewed, knowing a word clears it', async () => {
+  const core = createCore({ sql: sqlite() });
+  const s = await guest(core, 'reviewer');
+  assert.deepStrictEqual(await s.call('review'), { words: [], total: 0 });
+  s.emit('missed', '爱'); s.emit('missed', '八'); s.emit('missed', 'not-a-word'); s.emit('missed', { h: '爱' });
+  await new Promise(r => setTimeout(r, 5));
+  s.emit('missed', '爱'); // missed again: moves to the top, not duplicated
+  const r = await s.call('review');
+  assert.strictEqual(r.total, 2);
+  assert.deepStrictEqual(r.words.map(w => w.h), ['爱', '八']);
+  assert.strictEqual((await s.call('progress')).wrong, 2);
+  await s.call('learned', { h: '爱', known: true });
+  assert.deepStrictEqual((await s.call('review')).words.map(w => w.h), ['八']);
+  assert.ok((await client(core).call('review')).error);
+});
+
+test('streak counts consecutive days of any play, in Vietnam time', async () => {
+  let t = Date.parse('2026-10-24T16:59:00Z'); // 23:59 in Vietnam
+  const core = createCore({ sql: sqlite(), now: () => t });
+  const s = await guest(core, 'daily');
+  const streak = async () => (await s.call('me')).me.streak;
+  assert.strictEqual(await streak(), 0);
+  await s.call('practice', { level: 1 });
+  await s.call('practice', { level: 1 });
+  assert.strictEqual(await streak(), 1, 'twice in a day still counts once');
+  t += 2 * 60_000; // 00:01 next day in Vietnam
+  assert.strictEqual(await streak(), 1, 'yesterday still keeps the streak alive');
+  const w = (await s.call('learn', { level: 1 })).words[0];
+  await s.call('learned', { h: w.h, known: true });
+  assert.strictEqual(await streak(), 2);
+  t += 2 * 86_400_000; // skip a whole day
+  assert.strictEqual(await streak(), 0);
+  await s.call('practice', { level: 1 });
+  assert.strictEqual(await streak(), 1);
+});
+
+test('invite link: friendly match, no Elo, invite errors', { timeout: 30000 }, async () => {
+  const core = createCore({ sql: sqlite() });
+  const [host, friend, other] = await Promise.all([guest(core, 'host'), guest(core, 'friend'), guest(core, 'other')]);
+  assert.ok((await client(core).call('invite')).error, 'login required');
+  const { code } = await host.call('invite');
+  assert.match(code, /^[0-9a-f]{8}$/);
+  assert.match((await host.call('join', { code })).error, /lời mời của bạn/);
+  assert.ok((await friend.call('join', { code: 'nope' })).error);
+  assert.ok((await friend.call('join', {})).error);
+  const started = host.next('start');
+  assert.deepStrictEqual(await friend.call('join', { code }), {});
+  const st = await started;
+  assert.strictEqual(st.ranked, false);
+  assert.strictEqual(st.opponent.name, 'friend');
+  assert.ok((await other.call('join', { code })).error, 'an invite works once');
+  await host.next('question');
+  friend.close();
+  const end = await host.next('end');
+  assert.strictEqual(end.ranked, false);
+  assert.strictEqual(end.result, 1);
+  assert.strictEqual(end.delta, 0);
+  assert.strictEqual(end.me.wins, 0);
+  assert.strictEqual(end.me.streak, 1, 'a friendly match still counts as playing');
+  assert.deepStrictEqual(await host.call('leaderboard', { period: 'month' }), [], 'friendly matches stay off the monthly board');
+});
+
+test('invite expires after 15 minutes and when the host leaves', async () => {
+  let t = Date.now();
+  const core = createCore({ sql: sqlite(), now: () => t });
+  const [host, friend] = await Promise.all([guest(core, 'host'), guest(core, 'friend')]);
+  const { code } = await host.call('invite');
+  t += 16 * 60_000;
+  assert.match((await friend.call('join', { code })).error, /hết hạn/);
+  const { code: code2 } = await host.call('invite');
+  host.close();
+  assert.ok((await friend.call('join', { code: code2 })).error);
+});
+
+test('monthly leaderboard: Elo gained this month, resets next month', { timeout: 30000 }, async () => {
+  let t = Date.parse('2026-10-31T10:00:00Z');
+  const core = createCore({ sql: sqlite(), now: () => t });
+  const [a, b] = await Promise.all([guest(core, 'winner'), guest(core, 'loser')]);
+  const q = a.next('question');
+  a.emit('queue'); b.emit('queue');
+  await q;
+  b.close();
+  await a.next('end');
+  const month = await a.call('leaderboard', { period: 'month' });
+  assert.deepStrictEqual(month.map(p => [p.name, p.gain]), [['winner', 16], ['loser', -16]]);
+  assert.strictEqual((await a.call('leaderboard')).length, 2, 'all-time board unchanged in shape');
+  t = Date.parse('2026-11-01T10:00:00Z');
+  assert.deepStrictEqual(await a.call('leaderboard', { period: 'month' }), [], 'new month starts empty');
+  assert.strictEqual((await a.call('me')).me.gain, 0);
 });
 
 test('pvp: full match, answers validated, elo applied and persisted', { timeout: 60000 }, async () => {
