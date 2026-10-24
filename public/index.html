@@ -442,7 +442,7 @@ footer { font-size:12px; color:var(--mute); padding:28px 0 0; border-top:1px sol
   </section>
 
   <footer>
-    Từ vựng HSK: <a href="https://github.com/drkameleon/complete-hsk-vocabulary">complete-hsk-vocabulary</a> (MIT) ·
+    Từ vựng HSK 3.0 (GF 0025-2021): <a href="https://github.com/ivankra/hsk30">ivankra/hsk30</a> (MIT) · Tiếng Anh: <a href="https://www.mdbg.net/chinese/dictionary?page=cc-cedict">CC-CEDICT</a> (CC BY-SA 4.0) ·
     Nghĩa tiếng Việt: CVDICT của Phong Phan (<a href="https://creativecommons.org/licenses/by-sa/4.0/">CC BY-SA 4.0</a>)
   </footer>
 </main>
@@ -991,7 +991,7 @@ async function nextDrill() {
     } else {
       drill.streak = 0;
       drill.wrong.push(q.word);
-      socket.emit('missed', q.word.h);
+      socket.emit('missed', q.word.id);
       sfx.bad(); vibrate([40, 30, 40]);
       markAnswer(q.answer, i);
       showWord(q.word);
@@ -1088,7 +1088,7 @@ function rate(known) {
   if (known) {
     learn.learned++;
     learn.left--;
-    call('learned', { h: w.h, known: true }).then(r => r.error && toast(r.error));
+    call('learned', { id: w.id, known: true }).then(r => r.error && toast(r.error));
     sfx.ok(); vibrate(15);
   } else {
     learn.deck.splice(Math.min(3, learn.deck.length), 0, w); // see it again soon, not immediately

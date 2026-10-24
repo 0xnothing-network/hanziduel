@@ -6,8 +6,14 @@
 import * as G from '../game.js';
 import WORDS from '../data/words.json' with { type: 'json' };
 
-const WORD_LEVEL = new Map(Object.entries(WORDS).flatMap(([lv, ws]) => ws.map(w => [w.h, +lv])));
-const WORD = new Map(Object.values(WORDS).flat().map(w => [w.h, w]));
+// Words are keyed by their official id (L1-0210): one hanzi can be several words (了 le / liǎo).
+const WORD_LEVEL = new Map(Object.entries(WORDS).flatMap(([lv, ws]) => ws.map(w => [w.id, +lv])));
+const WORD = new Map(Object.values(WORDS).flat().map(w => [w.id, w]));
+// Progress used to be keyed by hanzi, and older tabs may still send hanzi: map it to its lowest-level reading.
+const BY_HANZI = new Map();
+for (const w of Object.values(WORDS).flat()) if (!BY_HANZI.has(w.h)) BY_HANZI.set(w.h, w.id);
+const wordId = x => typeof x !== 'string' ? null : WORD.has(x) ? x : BY_HANZI.get(x) ?? null;
+const rekey = obj => Object.fromEntries(Object.entries(obj || {}).flatMap(([k, v]) => wordId(k) ? [[wordId(k), v]] : []));
 const INVITE_MS = 15 * 60_000;
 const DAY_MS = 86_400_000;
 // Days and months roll over at midnight Vietnam time (UTC+7).
@@ -43,6 +49,8 @@ export function createCore({ sql, clientId = '', verifyGoogle, now = Date.now })
   sql.exec('CREATE TABLE IF NOT EXISTS invites (code TEXT PRIMARY KEY, host TEXT NOT NULL, at INTEGER NOT NULL)');
   // All players live in memory (one game server); every change is written through to SQLite at once.
   const players = Object.fromEntries(sql.exec('SELECT id, data FROM players').toArray().map(r => [r.id, JSON.parse(r.data)]));
+  // In memory only; the new keys are written the next time the player changes anything.
+  for (const p of Object.values(players)) { p.learned = rekey(p.learned); p.wrong = rekey(p.wrong); }
   const save = id => sql.exec('INSERT INTO players (id, data) VALUES (?, ?) ON CONFLICT(id) DO UPDATE SET data = excluded.data', id, JSON.stringify(players[id]));
 
   // Streak = consecutive days with any play; shown as 0 once a day has been missed.
@@ -169,8 +177,8 @@ export function createCore({ sql, clientId = '', verifyGoogle, now = Date.now })
     review(conn) {
       const p = me(conn);
       if (!p) return { error: 'Chưa đăng nhập' };
-      const wrong = Object.entries(p.wrong || {}).filter(([h]) => WORD.has(h)).sort((a, b) => b[1] - a[1]);
-      return { words: wrong.slice(0, 10).map(([h]) => WORD.get(h)), total: wrong.length };
+      const wrong = Object.entries(p.wrong || {}).filter(([id]) => WORD.has(id)).sort((a, b) => b[1] - a[1]);
+      return { words: wrong.slice(0, 10).map(([id]) => WORD.get(id)), total: wrong.length };
     },
     // Friendly match by link. Unranked so nobody can farm Elo off a second account.
     invite(conn) {
@@ -201,20 +209,21 @@ export function createCore({ sql, clientId = '', verifyGoogle, now = Date.now })
       const p = me(conn);
       if (!p) return { error: 'Chưa đăng nhập' };
       if (!validLevel(level)) return { error: 'Cấp HSK không hợp lệ' };
-      const fresh = WORDS[level].filter(w => !p.learned[w.h]);
+      const fresh = WORDS[level].filter(w => !p.learned[w.id]);
       return { words: fresh.slice(0, 10), learned: WORDS[level].length - fresh.length, total: WORDS[level].length };
     },
     progress(conn) {
       const p = me(conn);
       if (!p) return { error: 'Chưa đăng nhập' };
       const learned = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, 7: 0 };
-      for (const h in p.learned) learned[WORD_LEVEL.get(h)]++;
+      for (const id in p.learned) learned[WORD_LEVEL.get(id)]++;
       return { learned, total: TOTALS, wrong: Object.keys(p.wrong || {}).length };
     },
-    learned(conn, { h, known }) {
+    learned(conn, { id, h: legacy, known }) {
       const p = me(conn);
       if (!p) return { error: 'Chưa đăng nhập' };
-      if (typeof h !== 'string' || !WORD_LEVEL.has(h)) return { error: 'Từ không tồn tại' };
+      const h = wordId(id ?? legacy);
+      if (!h) return { error: 'Từ không tồn tại' };
       // Knowing a word also takes it off the review list.
       const before = JSON.stringify([p.learned[h], p.wrong?.[h]]);
       if (known) { p.learned[h] = 1; if (p.wrong) delete p.wrong[h]; } else delete p.learned[h];
@@ -236,9 +245,9 @@ export function createCore({ sql, clientId = '', verifyGoogle, now = Date.now })
       if (m && Number.isInteger(i) && i >= 0 && i < 4) m.answer(conn.data.id, i);
     },
     // Drill answers are checked in the browser, so the browser reports its misses.
-    missed(conn, h) {
-      const id = conn.data.id;
-      if (!players[id] || typeof h !== 'string' || !WORD.has(h)) return;
+    missed(conn, word) {
+      const id = conn.data.id, h = wordId(word);
+      if (!players[id] || !h) return;
       const fresh = !players[id].wrong?.[h];
       missed(id, h);
       if (fresh) save(id); // a repeat miss only reorders the list; not worth a write
@@ -309,7 +318,7 @@ export function createCore({ sql, clientId = '', verifyGoogle, now = Date.now })
       for (const id of ids) {
         const p = picks[id];
         if (p) score[id] += G.points(p.i === q.answer, G.ROUND_MS - p.ms);
-        if (p?.i !== q.answer) missed(id, q.word.h);
+        if (p?.i !== q.answer) missed(id, q.word.id);
       }
       waiting = arm(2000);
       conns.forEach((c, k) => emit(c, 'reveal', {

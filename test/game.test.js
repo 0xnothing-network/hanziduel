@@ -30,11 +30,17 @@ test('points reward speed only when correct', () => {
 test('every word has a meaning, almost all in Vietnamese', () => {
   const all = Object.values(WORDS).flat();
   assert.ok(all.length > 10000);
-  assert.ok(all.every(w => w.h && w.p && w.m && w.en));
+  assert.ok(all.every(w => w.id && w.h && w.p && w.m && typeof w.en === "string"));
   assert.ok(all.filter(w => w.vi).length / all.length > 0.99);
-  assert.ok(!all.some(w => /\b(LT|CL):|Lượng từ|biến thể của/.test(w.m + w.vi)));
+  assert.ok(!all.some(w => /\b(LT|CL):|Lượng từ\s*[:：]|biến thể của/.test(w.m + w.vi)));
   assert.ok(!all.some(w => /\[[a-z]+\d|\|/i.test(w.m + w.vi)), 'no raw dictionary cross-references');
   const find = h => all.find(w => w.h === h);
+  assert.strictEqual(new Set(all.map(w => w.id)).size, all.length, 'official ids are unique');
+  // Official readings, not guessed ones; homographs are separate words.
+  for (const [h, p] of [['没', 'méi'], ['那', 'nà'], ['胖', 'pàng'], ['血', 'xiě'], ['薄', 'báo']]) assert.strictEqual(find(h).p, p, h);
+  assert.deepStrictEqual(all.filter(w => w.h === '了').map(w => w.p), ['le', 'liǎo']);
+  assert.ok(find('表示') && find('森林'), 'words missing from the old list are present');
+  assert.ok(all.every(w => /^[^0-9:|∥·˙]+$/.test(w.p)), 'no raw pinyin artefacts');
   assert.strictEqual(find('吃').m, 'ăn');
   assert.strictEqual(find('说').m, 'nói');
   assert.strictEqual(find('国').m, 'quốc gia');

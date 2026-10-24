@@ -5,6 +5,7 @@ import path from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 import { createCore } from '../src/core.js';
 import * as G from '../game.js';
+import WORDS from '../data/words.json' with { type: 'json' };
 
 // node:sqlite behind the Durable Object SQL API shape: sql.exec(query, ...params).toArray()
 function sqlite(file = ':memory:') {
@@ -188,6 +189,24 @@ test('sessions expire after 60 days idle, a visit renews them, old tables are up
   sql.exec("INSERT INTO sessions (token_hash, player_id) VALUES ('legacy', 'x')");
   createCore({ sql, now: () => t });
   assert.strictEqual(sql.exec("SELECT at FROM sessions WHERE token_hash = 'legacy'").toArray()[0].at, t);
+});
+
+test('progress keyed by word id; old hanzi-keyed progress is carried over', async () => {
+  const sql = sqlite();
+  const core = createCore({ sql });
+  const s = await guest(core, 'veteran');
+  const [le, liao] = Object.values(WORDS).flat().filter(w => w.h === '了');
+  await s.call('learned', { id: liao.id, known: true });
+  assert.ok(!(await s.call('learn', { level: 3 })).words.some(w => w.id === liao.id));
+  assert.strictEqual((await s.call('progress')).learned[1], 0, 'knowing 了 liǎo does not mark 了 le');
+  // A player saved before ids existed: hanzi keys move to the lowest-level reading.
+  const row = sql.exec('SELECT data FROM players').toArray()[0];
+  sql.exec('UPDATE players SET data = ?', JSON.stringify({ ...JSON.parse(row.data), learned: { 了: 1, 爱: 1, gone: 1 }, wrong: { 八: 5 } }));
+  const c = client(createCore({ sql }));
+  await c.call('resume', { token: s.token });
+  assert.strictEqual((await c.call('progress')).learned[1], 2, '了 → le and 爱, unknown key dropped');
+  assert.ok((await c.call('learn', { level: 1 })).words.every(w => w.id !== le.id));
+  assert.deepStrictEqual((await c.call('review')).words.map(w => w.h), ['八']);
 });
 
 test('streak counts consecutive days of any play, in Vietnam time', async () => {

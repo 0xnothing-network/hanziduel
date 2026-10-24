@@ -86,10 +86,13 @@ FROM players ORDER BY elo DESC LIMIT 10;
 
 | Dữ liệu | Nguồn | Giấy phép |
 |---|---|---|
-| Danh sách từ HSK 3.0, pinyin, nghĩa tiếng Anh | [complete-hsk-vocabulary](https://github.com/drkameleon/complete-hsk-vocabulary) | MIT |
+| Danh sách từ, cấp HSK, pinyin | [ivankra/hsk30](https://github.com/ivankra/hsk30): bản chép lại chuẩn chính thức **GF 0025-2021** (Bộ Giáo dục TQ, 2021), khớp đúng số từ từng cấp (500 / 772 / 973 / 1000 / 1071 / 1140 / 5636) | MIT |
+| Nghĩa tiếng Anh | [CC-CEDICT](https://www.mdbg.net/chinese/dictionary?page=cc-cedict) (bản lưu trong [licryle/CxDICT](https://github.com/licryle/CxDICT)) | CC BY-SA 4.0 |
 | Nghĩa tiếng Việt | **CVDICT** của Phong Phan, dịch từ CC-CEDICT. Repo gốc `ph0ngp/CVDICT` đã offline nên dùng bản `CVDICT.u8` nguyên vẹn trong [phucbm/xue-hanzi](https://github.com/phucbm/xue-hanzi), cố định theo commit | [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/) |
 
-`npm run words` ghép hai nguồn theo **chữ + pinyin** để chọn đúng nghĩa khi một chữ có nhiều cách đọc. Có 42 trên 10.969 từ không có trong CVDICT; những từ này hiển thị nghĩa tiếng Anh.
+`npm run words` ghép các nguồn theo **đúng mục từ điển** mà hsk30 chỉ ra (chữ + cách đọc), nên 了 le và 了 liǎo có nghĩa riêng. Từ nào chuẩn lặp lại ở cấp cao hơn với cùng cách đọc (vì thêm nghĩa mới) thì chỉ giữ ở cấp thấp nhất. 41 cụm từ không có trong từ điển được dịch riêng cho dự án (`OWN` trong `build-words.js`). Mọi nguồn đều cố định theo commit.
+
+Chưa dùng **đề cương thi HSK mới (CLEC, 11/2025)**: danh sách khác hẳn chuẩn 2021, kỳ thi còn đang thi thử, và bên ra đề giữ bản quyền.
 
 **CC BY-SA 4.0 yêu cầu:**
 - Ghi nguồn. Footer của web đã ghi sẵn, đừng xoá.
