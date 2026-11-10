@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cut">
 <title>HanziDuel · 汉字对决</title>
-<meta name="description" content="Đấu từ vựng tiếng Trung HSK 3.0 realtime: nhìn chữ Hán, chọn nghĩa tiếng Việt.">
+<meta name="description" content="Đấu từ vựng tiếng Trung HSK 3.0 realtime, luyện phản xạ và thử thách mỗi ngày.">
 <meta name="theme-color" content="#f3eee3">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='6' fill='%23b3301e'/%3E%3Ctext x='32' y='45' font-size='38' text-anchor='middle' fill='%23f3eee3' font-family='serif'%3E汉%3C/text%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -102,8 +102,9 @@ input.field:focus { outline:none; border-bottom-color:var(--red); }
 #gbtn { display:flex; justify-content:flex-start; min-height:44px; }
 
 /* Tabs */
-.tabs { display:flex; gap:28px; border-bottom:1px solid var(--rule); position:sticky; top:0; z-index:10; background:var(--paper) var(--fiber); }
-.tabs button { padding:16px 0 12px; font-weight:600; color:var(--mute); border-bottom:2.5px solid transparent; margin-bottom:-1px; }
+.tabs { display:flex; gap:18px; border-bottom:1px solid var(--rule); position:sticky; top:0; z-index:10; background:var(--paper) var(--fiber); overflow-x:auto; scrollbar-width:none; }
+.tabs::-webkit-scrollbar { display:none; }
+.tabs button { flex:none; padding:16px 0 12px; font-weight:600; color:var(--mute); border-bottom:2.5px solid transparent; margin-bottom:-1px; }
 .tabs button:hover { color:var(--ink); }
 .tabs button[aria-selected="true"] { color:var(--ink); border-bottom-color:var(--red); }
 .tabs button i { font:700 15px var(--zh); font-style:normal; margin-right:6px; color:var(--red); }
@@ -135,6 +136,7 @@ table { width:100%; border-collapse:collapse; }
 .ladder tr.cur td { color:var(--red); font-weight:600; }
 .ladder td:last-child { text-align:right; color:var(--mute); }
 details summary { cursor:pointer; list-style:none; font-weight:600; display:flex; justify-content:space-between; }
+details:not([open]) > :not(summary) { display:none !important; }
 details summary::after { content:"+"; font:400 20px/1 var(--serif); color:var(--mute); }
 details[open] summary::after { content:"–"; }
 details[open] summary { margin-bottom:10px; }
@@ -170,7 +172,7 @@ details[open] summary { margin-bottom:10px; }
 .streak { font-size:13px; font-weight:600; color:var(--red); margin-top:4px; }
 .streak.off { color:var(--mute); font-weight:400; }
 .streak i { font:700 15px var(--zh); font-style:normal; }
-.periods { display:flex; gap:14px; }
+.periods { display:flex; flex-wrap:wrap; gap:14px; }
 .periods .btn.text { font-size:13px; color:var(--mute); text-decoration:none; }
 .periods .btn.text[aria-pressed="true"] { color:var(--ink); text-decoration:underline; text-decoration-color:var(--red); text-decoration-thickness:2px; }
 #findHint { overflow-wrap:anywhere; }
@@ -196,7 +198,7 @@ details[open] summary { margin-bottom:10px; }
 .qmeta { text-align:center; font-size:11px; letter-spacing:.16em; text-transform:uppercase; color:var(--mute); margin-bottom:14px; }
 .qcard { position:relative; padding-bottom:6px; }
 .reveal { min-height:58px; text-align:center; padding-top:12px; }
-.reveal .py { font:500 20px var(--serif); color:var(--red); }
+.reveal .py { font:500 20px var(--serif); }
 .reveal .vi { color:var(--ink2); font-size:15px; }
 .opts { border-top:1px solid var(--ink); }
 .opt { display:grid; grid-template-columns:36px 1fr auto; align-items:center; gap:8px; width:100%; min-height:62px; padding:12px 4px; text-align:left; border-bottom:1px solid var(--rule); font-size:17px; font-weight:500; transition:background .12s, color .12s, padding .12s; }
@@ -228,7 +230,7 @@ details[open] summary { margin-bottom:10px; }
 .flip.on .flip-inner { transform:rotateY(180deg); }
 .face { position:absolute; inset:0; backface-visibility:hidden; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px; padding:20px; text-align:center; background:var(--sheet); border:1px solid var(--rule); }
 .face.back { transform:rotateY(180deg); }
-.face .py { font:500 26px var(--serif); color:var(--red); }
+.face .py { font:500 26px var(--serif); }
 .face .vi { font-size:18px; font-weight:500; max-width:520px; line-height:1.45; }
 .face .en { font-size:13px; color:var(--mute); font-style:italic; }
 .face .zhsm { font:700 40px/1 var(--zh); }
@@ -241,9 +243,36 @@ details[open] summary { margin-bottom:10px; }
 @keyframes stamp { from { transform:rotate(-8deg) scale(2.2); opacity:0; } 60% { opacity:1; } }
 .verdict h2 { font-size:30px; }
 .verdict .delta { font:700 20px var(--serif); margin-top:6px; }
+.endacts { display:flex; justify-content:center; gap:18px; margin:-4px 0 8px; }
+.badges { display:grid; grid-template-columns:repeat(auto-fill, minmax(76px, 1fr)); gap:14px 8px; }
+.badge { display:grid; justify-items:center; gap:6px; text-align:center; font-size:11px; line-height:1.3; color:var(--mute); }
+.badge .seal.sm { width:34px; height:34px; font-size:16px; opacity:.32; }
+.badge.on { color:var(--ink2); }
+.badge.on .seal.sm { opacity:1; }
+.duel { min-height:0; padding:0 0 0 8px; font-size:13px; color:var(--red); text-decoration:underline; text-underline-offset:3px; }
+.challenge { margin-top:14px; padding-bottom:14px; border-bottom:1px solid var(--rule); }
+.reacts { display:flex; justify-content:center; gap:8px; margin-top:14px; }
+.reacts button { min-height:40px; padding:6px 14px; border:1px solid var(--ink); border-radius:3px; font:600 18px var(--zh); }
+.reacts button:hover { background:var(--ink); color:var(--paper); }
+.wotd { text-align:center; padding:8px 0 2px; }
+.wotd .py { font:500 22px var(--serif); margin-top:12px; }
+.handoff { text-align:center; padding:72px 0 24px; }
+.handoff h2 { font-size:clamp(28px, 6vw, 40px); margin:10px 0; overflow-wrap:anywhere; }
+.group-code { font:700 32px/1 var(--serif); letter-spacing:.16em; margin:0 0 6px; }
+.wotd .vi { font-size:18px; font-weight:500; margin-top:4px; }
+.wotd .en { font-size:13px; color:var(--mute); font-style:italic; margin-top:4px; }
+.mark-win { color:var(--jade); }
+.mark-lose { color:var(--red); }
+#dailyBoard { margin-top:16px; }
 .review td { padding:12px 0; border-bottom:1px solid var(--rule2); vertical-align:middle; }
 .review td.hz { font:700 26px/1 var(--zh); padding-right:16px; width:1%; white-space:nowrap; }
-.review .py { color:var(--red); font-family:var(--serif); }
+.review .py { font-family:var(--serif); }
+.review td.lvn { width:52px; text-align:right; color:var(--mute); font-family:var(--serif); white-space:nowrap; }
+.py .t1 { color:var(--red); }
+.py .t2 { color:var(--gold); }
+.py .t3 { color:var(--jade); }
+.py .t4 { color:var(--ink); }
+.py .t5, .py .t0 { color:var(--mute); }
 .review .sp { width:40px; text-align:right; }
 
 /* Toast */
@@ -257,7 +286,8 @@ footer { font-size:12px; color:var(--mute); padding:28px 0 0; border-top:1px sol
   .who .meta { display:none; }
   .brand small { display:none; }
   .cover { grid-template-columns:1fr; } .vert { display:none; }
-  .tabs { gap:20px; }
+  .tabs { gap:14px; }
+  .tabs button { font-size:14px; }
   .lv small { display:none; }
   .lv b { font-size:19px; }
   .elo { font-size:52px; }
@@ -290,6 +320,14 @@ footer { font-size:12px; color:var(--mute); padding:28px 0 0; border-top:1px sol
     <button role="menuitem" id="logoutBtn">Đăng xuất</button>
   </div>
 
+  <div id="challenge" class="challenge" hidden>
+    <p id="challengeText" style="margin:0 0 10px"></p>
+    <div class="two">
+      <button class="btn" id="challengeNo">Để sau</button>
+      <button class="btn red" id="challengeYes">Đấu</button>
+    </div>
+  </div>
+
   <!-- Login -->
   <section id="login" hidden>
     <div class="cover">
@@ -304,6 +342,7 @@ footer { font-size:12px; color:var(--mute); padding:28px 0 0; border-top:1px sol
         <li><i>壹</i><div><b>Đấu xếp hạng</b><span class="mute">10 câu, 10 giây mỗi câu, tính điểm Elo.</span></div></li>
         <li><i>贰</i><div><b>Luyện phản xạ</b><span class="mute">60 giây, trả lời liên tục, giữ chuỗi đúng.</span></div></li>
         <li><i>叁</i><div><b>Học từ mới</b><span class="mute">Thẻ lật có pinyin, nghĩa và phát âm.</span></div></li>
+        <li><i>肆</i><div><b>Thử thách ngày</b><span class="mute">10 câu giống nhau với mọi người. Một lượt, không tính Elo.</span></div></li>
       </ul>
     </div>
     <div class="signin">
@@ -324,6 +363,7 @@ footer { font-size:12px; color:var(--mute); padding:28px 0 0; border-top:1px sol
       <button role="tab" data-tab="pvp"><i>斗</i>Đấu</button>
       <button role="tab" data-tab="drill"><i>速</i>Phản xạ</button>
       <button role="tab" data-tab="learn"><i>学</i>Học từ</button>
+      <button role="tab" data-tab="try"><i>试</i>Thử</button>
     </nav>
 
     <div data-panel="pvp" role="tabpanel">
@@ -344,12 +384,28 @@ footer { font-size:12px; color:var(--mute); padding:28px 0 0; border-top:1px sol
         <p class="hint" id="findHint">10 câu · 10 giây mỗi câu · đúng và nhanh được nhiều điểm hơn</p>
       </div>
       <div class="section">
+        <details>
+          <summary>Hai người, một máy</summary>
+          <p class="mute">10 câu luân phiên. Tên chỉ ở trên máy này. Không tính Elo.</p>
+          <label class="sr" for="ppA">Người thứ nhất</label>
+          <input class="field" id="ppA" maxlength="20" placeholder="Người thứ nhất" autocomplete="off">
+          <label class="sr" for="ppB">Người thứ hai</label>
+          <input class="field" id="ppB" maxlength="20" placeholder="Người thứ hai" autocomplete="off" style="margin-top:8px">
+          <div class="levels" id="ppLevels" role="group" aria-label="Cấp HSK hai người"></div>
+          <button class="btn red block lg" id="ppStart" type="button">Bắt đầu</button>
+        </details>
+      </div>
+      <div class="section">
         <div class="rowx"><p class="kicker" style="margin:0">Bảng xếp hạng</p>
           <span class="periods"><button class="btn text" data-period="month">Tháng này</button><button class="btn text" data-period="all">Mọi thời đại</button></span></div>
+        <p class="mute" id="presence" style="margin:0 0 8px"></p>
         <table class="ledger" id="board" aria-label="Bảng xếp hạng"></table>
       </div>
       <div class="section">
         <details><summary>Bậc rank và cấp HSK</summary><table class="ladder" id="ladder"></table></details>
+      </div>
+      <div class="section">
+        <details><summary>Nhật ký trận</summary><table class="ledger" id="journal" aria-label="Nhật ký trận"></table></details>
       </div>
     </div>
 
@@ -357,8 +413,21 @@ footer { font-size:12px; color:var(--mute); padding:28px 0 0; border-top:1px sol
       <div class="section">
         <h2>Luyện phản xạ</h2>
         <p class="mute" style="margin:6px 0 0">60 giây. Trả lời đúng liên tiếp để giữ chuỗi. Không ảnh hưởng rank.</p>
+        <p class="kicker" style="margin-top:16px">Dạng câu</p>
+        <div class="periods" id="drillTypes" role="group" aria-label="Dạng câu">
+          <button type="button" class="btn text" data-qtype="">Tất cả</button>
+          <button type="button" class="btn text" data-qtype="Hán → Việt">Hán → Việt</button>
+          <button type="button" class="btn text" data-qtype="Việt → Hán">Việt → Hán</button>
+          <button type="button" class="btn text" data-qtype="Nghe → nghĩa">Nghe → nghĩa</button>
+        </div>
         <div class="levels" id="drillLevels" role="group" aria-label="Cấp HSK"></div>
         <button class="btn red block lg" id="drillStart">Bắt đầu</button>
+      </div>
+      <div class="section">
+        <h2>Sống sót</h2>
+        <p class="mute" style="margin:6px 0 0">Sai một câu, hoặc quá 10 giây, là dừng. Kỷ lục riêng, không xếp hạng. Dùng dạng câu ở trên.</p>
+        <div class="levels" id="surviveLevels" role="group" aria-label="Cấp HSK sống sót"></div>
+        <button class="btn red block lg" id="surviveStart" type="button">Bắt đầu</button>
       </div>
     </div>
 
@@ -367,9 +436,66 @@ footer { font-size:12px; color:var(--mute); padding:28px 0 0; border-top:1px sol
         <h2>Học từ mới</h2>
         <p class="mute" style="margin:6px 0 0">Lật thẻ để xem pinyin, nghĩa và nghe phát âm. Tiến độ được lưu theo tài khoản.</p>
         <div class="levels" id="learnLevels" role="group" aria-label="Cấp HSK"></div>
-        <p class="mute" id="learnStat" style="margin:-6px 0 16px"></p>
+        <p class="mute" id="learnStat" style="margin:-6px 0 8px"></p>
+        <div class="meter"><div id="goalBar" style="width:0"></div></div>
+        <p class="mute" id="goalText" style="margin:8px 0 16px">Hôm nay 0/10 từ</p>
         <button class="btn red block lg" id="learnStart">Học</button>
         <button class="btn block" id="reviewStart" style="margin-top:10px">Ôn từ đã sai</button>
+        <button class="btn block" id="copyReview" style="margin-top:10px" type="button">Chép sổ tay</button>
+        <p class="mute" style="margin:8px 0 0">Chép tối đa 10 từ đang ôn: chữ, pinyin, nghĩa.</p>
+        <button class="btn block" id="pyStart" style="margin-top:10px">Gõ pinyin</button>
+        <p class="mute" style="margin:8px 0 0">Nhìn chữ và nghĩa, gõ pinyin có dấu hoặc số. Không ảnh hưởng rank.</p>
+      </div>
+      <div class="section">
+        <h2>Họ chữ</h2>
+        <p class="mute" style="margin:6px 0 0">Một chữ. Các từ HSK có chữ đó, cấp thấp trước.</p>
+        <label class="sr" for="familyInput">Một chữ Hán</label>
+        <input class="field" id="familyInput" maxlength="8" placeholder="Một chữ" autocomplete="off">
+        <button class="btn block" id="familyGo" style="margin-top:14px" type="button">Tra</button>
+        <table class="review" id="familyList" aria-label="Họ chữ"></table>
+      </div>
+    </div>
+
+    <div data-panel="try" role="tabpanel">
+      <div class="section">
+        <div class="rowx"><p class="kicker" style="margin:0">Từ trong ngày</p><span class="mute" id="wotdDate"></span></div>
+        <div class="wotd">
+          <div class="mi" id="wotdBox"><span class="ch" id="wotdHz" lang="zh"></span></div>
+          <div id="wotdBack" hidden>
+            <div class="py" id="wotdPy"></div>
+            <div class="vi" id="wotdVi"></div>
+            <div class="en" id="wotdEn" lang="en"></div>
+          </div>
+        </div>
+        <button class="btn block" id="wotdBtn">Xem nghĩa</button>
+      </div>
+      <div class="section">
+        <h2>Thử thách ngày</h2>
+        <p class="mute" style="margin:6px 0 0">10 câu, 12 giây mỗi câu, cùng một đề với mọi người. Rời quá giờ thì câu đang mở bị tính sai. Không tính Elo.</p>
+        <p class="streak" id="dailyStatus"></p>
+        <button class="btn red block lg" id="dailyStart">Bắt đầu</button>
+        <table class="ledger" id="dailyBoard" aria-label="Bảng thử thách hôm nay"></table>
+      </div>
+      <div class="section">
+        <h2>Kiểm tra</h2>
+        <p class="mute" style="margin:6px 0 0">15 câu, 3 phút. Chưa hiện đúng sai cho đến khi nộp. Đạt từ 12 câu. Không ảnh hưởng rank.</p>
+        <div class="levels" id="examLevels" role="group" aria-label="Cấp HSK"></div>
+        <button class="btn red block lg" id="examStart">Làm bài</button>
+      </div>
+      <div class="section">
+        <h2>Thanh điệu</h2>
+        <p class="mute" style="margin:6px 0 0">Nhìn chữ, chọn thanh của từng âm. Không tính điểm.</p>
+        <div class="levels" id="toneLevels" role="group" aria-label="Cấp HSK thanh điệu"></div>
+        <button class="btn red block lg" id="toneStart" type="button">Luyện thanh</button>
+      </div>
+      <div class="section">
+        <h2>Nhóm học</h2>
+        <p class="mute" style="margin:6px 0 0">Một nhóm. Xem chuỗi ngày và ai đã xong bài hôm nay. Không tính Elo.</p>
+        <div id="groupBox"><p class="mute">…</p></div>
+      </div>
+      <div class="section">
+        <p class="kicker">Thành tích</p>
+        <div class="badges" id="badges"></div>
       </div>
     </div>
   </section>
@@ -385,6 +511,17 @@ footer { font-size:12px; color:var(--mute); padding:28px 0 0; border-top:1px sol
     <p class="hint" id="vsHsk"></p>
   </section>
 
+  <section id="handoff" hidden>
+    <div class="handoff">
+      <p class="kicker">Đổi lượt</p>
+      <h2 id="handTitle"></h2>
+      <p class="mute" id="handSub">Người kia không thấy đáp án.</p>
+      <p class="num" id="handScore" style="margin-top:14px"></p>
+      <button class="btn red block lg" id="handGo" style="margin-top:28px" type="button">Tới lượt mình</button>
+      <button class="btn text" id="handStop" style="margin-top:16px" type="button">Dừng</button>
+    </div>
+  </section>
+
   <!-- Question (PvP + drill) -->
   <section id="game" hidden>
     <div class="hud">
@@ -392,14 +529,25 @@ footer { font-size:12px; color:var(--mute); padding:28px 0 0; border-top:1px sol
       <div class="mid"><div class="lbl" id="roundLbl"></div><div class="clock" id="clock">10s</div></div>
       <div class="side right"><div class="name"><span id="hudOpp"></span><span class="tick" id="hudOppAv"></span></div><div class="pts" id="ptsOpp">0</div></div>
     </div>
-    <div class="fuse"><div id="timebar"></div></div>
+    <div class="fuse" id="fuse"><div id="timebar"></div></div>
     <div class="qmeta" id="qType"></div>
     <div class="qcard" id="qcard">
       <div class="mi" id="miBox"><span class="ch" id="prompt" lang="zh"></span></div>
       <div class="reveal" id="reveal" aria-live="polite"></div>
     </div>
     <div class="opts" id="opts"></div>
+    <button class="btn red block" id="turnNext" hidden type="button" style="margin-top:16px">Đổi lượt</button>
+    <form id="pyRow" hidden>
+      <label class="sr" for="pyInput">Pinyin</label>
+      <input class="field" id="pyInput" maxlength="48" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="měi hoặc mei2" enterkeyhint="done">
+      <button class="btn red block" id="pyGo" style="margin-top:14px" type="submit">Kiểm tra</button>
+    </form>
     <p class="hint" id="gameHint">Phím 1–4 để chọn nhanh</p>
+    <div class="reacts" id="reacts" hidden>
+      <button type="button" data-react="加油">加油</button>
+      <button type="button" data-react="厉害">厉害</button>
+      <button type="button" data-react="谢谢">谢谢</button>
+    </div>
     <div style="text-align:center"><button class="btn text" id="drillExit" hidden>Kết thúc sớm</button></div>
   </section>
 
@@ -435,6 +583,10 @@ footer { font-size:12px; color:var(--mute); padding:28px 0 0; border-top:1px sol
       <button class="btn" id="homeBtn">Về sảnh</button>
       <button class="btn red" id="againPlayBtn">Chơi tiếp</button>
     </div>
+    <p class="endacts">
+      <button class="btn text" id="shareBtn">Chia sẻ kết quả</button>
+      <button class="btn text" id="rematchBtn" hidden>Mời đấu lại</button>
+    </p>
     <div class="section" style="padding-top:8px">
       <p class="kicker" id="reviewTitle">Từ cần ôn</p>
       <table class="review" id="review"></table>
@@ -452,7 +604,7 @@ footer { font-size:12px; color:var(--mute); padding:28px 0 0; border-top:1px sol
 'use strict';
 const CLIENT_ID = '%GOOGLE_CLIENT_ID%';
 const $ = id => document.getElementById(id);
-const SCREENS = ['login', 'home', 'vs', 'game', 'cards', 'end'];
+const SCREENS = ['login', 'home', 'vs', 'game', 'cards', 'end', 'handoff'];
 const show = id => { SCREENS.forEach(s => $(s).hidden = s !== id); closeMenu(); window.scrollTo({ top: 0 }); };
 const hskLabel = lv => lv === 7 ? 'HSK 7–9' : `HSK ${lv}`;
 const hskRange = lv => lv === 1 ? 'HSK 1' : `HSK 1–${lv === 7 ? 9 : lv}`;
@@ -593,6 +745,21 @@ function renderGoogleButton() {
 }
 function showLogin(err = '') {
   me = null;
+  knownBadges = null;
+  mode = null;
+  dailyState = null;
+  exam = null;
+  drill = null;
+  py = null;
+  clearTimeout(tone?.timer);
+  clearTimeout(survive?.timer);
+  tone = null;
+  survive = null;
+  pp = null;
+  pickFn = null;
+  stopClock();
+  stopSearch();
+  $('challenge').hidden = true;
   $('userChip').hidden = true;
   $('loginErr').textContent = err;
   if (!err && pendingRoom) $('loginErr').textContent = 'Bạn được mời đấu giao hữu — đăng nhập để vào trận.';
@@ -608,9 +775,10 @@ function signedIn(res) {
   if (res.token) store.set('token', res.token);
   ranks = res.ranks;
   renderMe(res.me);
+  if (res.presence) renderPresence(res.presence);
   $('userChip').hidden = false;
-  // A reconnect (network blip, new deploy) keeps drill and flashcards going; a match can't survive it.
-  if (mode !== 'drill' && mode !== 'learn') home();
+  // A reconnect keeps a local study session; a live match cannot.
+  if (!['drill', 'learn', 'py', 'exam', 'tone', 'survive', 'pp', 'pp-hand'].includes(mode)) home();
   if (pendingRoom) {
     const code = pendingRoom;
     pendingRoom = null;
@@ -656,7 +824,55 @@ $('renameBtn').onclick = async () => {
 };
 
 /* ---------- Home ---------- */
+let knownBadges = null;
+function noteBadges(m) {
+  const on = new Set((m.badges || []).filter(b => b.on).map(b => b.id));
+  if (knownBadges) for (const b of m.badges || []) if (b.on && !knownBadges.has(b.id)) toast(`Thành tích mới · ${b.name}`);
+  knownBadges = on;
+}
+function renderBadges(m = me) {
+  if (!$('badges') || !m?.badges) return;
+  $('badges').replaceChildren(...m.badges.map(b => {
+    const node = el('div', { className: 'badge' + (b.on ? ' on' : ''), title: b.on ? b.name : `${b.name} · chưa đạt` });
+    node.setAttribute('aria-label', `${b.name}: ${b.on ? 'đã đạt' : 'chưa đạt'}`);
+    node.append(el('span', { className: 'seal sm', textContent: b.zh }), el('span', { textContent: b.name }));
+    return node;
+  }));
+}
+function shortWhen(t) {
+  const d = new Date(t);
+  if (!t || Number.isNaN(d.getTime())) return '';
+  return `${d.getDate()}/${d.getMonth() + 1} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+}
+function renderJournal(list) {
+  const box = $('journal');
+  if (!box) return;
+  box.replaceChildren(...(list?.length ? list.map(g => {
+    const mark = g.result === 1 ? '胜' : g.result === 0 ? '负' : '和';
+    const bits = [shortWhen(g.t), g.ranked ? `${g.delta > 0 ? '+' : ''}${g.delta} Elo` : 'giao hữu'];
+    if (g.forfeit) bits.push('bỏ cuộc');
+    if (g.perfect) bits.push('sạch');
+    const glyph = el('span', { className: g.result === 1 ? 'mark-win' : g.result === 0 ? 'mark-lose' : '', textContent: mark });
+    const again = g.pid && g.pid !== me?.pid ? el('button', { className: 'duel', textContent: 'Đấu lại' }) : null;
+    if (again) again.onclick = () => askChallenge(g.pid);
+    return el('tr', {},
+      el('td', { className: 'n zh' }, glyph),
+      el('td', {}, el('span', { className: 'seal sm', textContent: g.seal || initial(g.opp) }), g.opp, again, el('span', { className: 'rk', textContent: bits.filter(Boolean).join(' · ') })),
+      el('td', { className: 'r', textContent: `${g.score}–${g.oppScore}` }));
+  }) : [el('tr', {}, el('td', { className: 'mute', colSpan: 3, textContent: 'Chưa có trận nào.' }))]));
+}
+function renderStreak(m) {
+  const node = $('streak');
+  const bits = [];
+  if (m.streak) bits.push(el('span', {}, el('i', { textContent: '火' }), ` ${m.streak} ngày`));
+  if ((m.bestStreak || 0) > (m.streak || 0)) bits.push(document.createTextNode(`${bits.length ? ' · ' : ''}dài nhất ${m.bestStreak}`));
+  if (m.winStreak) bits.push(el('span', {}, bits.length ? ' · ' : '', el('i', { textContent: '连' }), ` ${m.winStreak}`));
+  if (!bits.length) { node.className = 'streak off'; node.textContent = 'Chơi mỗi ngày để giữ chuỗi'; return; }
+  node.className = 'streak';
+  node.replaceChildren(...bits);
+}
 function renderMe(m) {
+  noteBadges(m);
   me = m;
   const idx = ranks.findIndex(r => r.name === m.rank), cur = ranks[idx], next = ranks[idx + 1];
   setAvatar($('chipAvatar'), m);
@@ -676,9 +892,13 @@ function renderMe(m) {
   $('rankSeal').textContent = RANK_SEAL[m.rank];
   $('rankName').textContent = m.rank;
   $('elo').textContent = m.rating;
-  $('record').textContent = `${m.wins} thắng · ${m.losses} thua`;
-  $('streak').className = 'streak' + (m.streak ? '' : ' off');
-  $('streak').replaceChildren(...(m.streak ? [el('i', { textContent: '火' }), ` Chuỗi ${m.streak} ngày`] : ['Chơi mỗi ngày để giữ chuỗi']));
+  let rec = `${m.wins} thắng · ${m.losses} thua`;
+  if (m.perfect) rec += ` · ${m.perfect} trận sạch`;
+  if (m.peak > m.rating) rec += ` · đỉnh ${m.peak}`;
+  $('record').textContent = rec;
+  renderStreak(m);
+  renderJournal(m.recent);
+  renderBadges(m);
   $('hskRange').textContent = hskRange(m.hsk);
   $('nextRank').textContent = next ? `Còn ${next.min - m.rating} Elo lên ${next.name} · mở ${hskLabel(next.hsk)}` : 'Rank cao nhất';
   // Đồng spans 0–1099 but everyone starts at 1000, so measure each rank as the band just below the next one.
@@ -689,7 +909,8 @@ function tab(name) {
   store.set('tab', name);
   document.querySelectorAll('[data-tab]').forEach(b => b.setAttribute('aria-selected', b.dataset.tab === name));
   document.querySelectorAll('[data-panel]').forEach(p => p.hidden = p.dataset.panel !== name);
-  if (name === 'learn') loadProgress();
+  if (name === 'learn') { loadProgress(); renderGoal(); }
+  if (name === 'try') loadTry();
 }
 document.querySelectorAll('[data-tab]').forEach(b => b.onclick = () => tab(b.dataset.tab));
 
@@ -704,7 +925,12 @@ function home() {
     el('td', { textContent: hskRange(r.hsk) }))));
   loadBoard();
   renderDrillLevels();
+  renderDrillTypes();
+  renderSurviveLevels();
   renderLearnLevels();
+  renderExamLevels();
+  renderToneLevels();
+  renderPpLevels();
   call('me').then(r => !r.error && renderMe(r.me)); // streak may have changed while playing
 }
 let period = store.get('period') === 'all' ? 'all' : 'month';
@@ -713,10 +939,14 @@ async function loadBoard() {
   const list = await call('leaderboard', { period });
   if (!Array.isArray(list)) return;
   const month = period === 'month';
-  $('board').replaceChildren(...(list.length ? list.map((p, i) => el('tr', { className: p.pid === me?.pid ? 'me' : '' },
-    el('td', { className: 'n', textContent: i + 1 }),
-    el('td', {}, el('span', { className: 'seal sm', textContent: p.seal || initial(p.name) }), p.name, el('span', { className: 'rk', textContent: month ? `${p.rank} · ${p.rating}` : p.rank })),
-    el('td', { className: 'r', textContent: month ? `${p.gain > 0 ? '+' : ''}${p.gain}` : p.rating }))) : [el('tr', {}, el('td', { className: 'mute',
+  $('board').replaceChildren(...(list.length ? list.map((p, i) => {
+    const duel = p.pid && p.pid !== me?.pid ? el('button', { className: 'duel', textContent: 'Đấu' }) : null;
+    if (duel) duel.onclick = () => askChallenge(p.pid);
+    return el('tr', { className: p.pid === me?.pid ? 'me' : '' },
+      el('td', { className: 'n', textContent: i + 1 }),
+      el('td', {}, el('span', { className: 'seal sm', textContent: p.seal || initial(p.name) }), p.name, duel, el('span', { className: 'rk', textContent: month ? `${p.rank} · ${p.rating}` : p.rank })),
+      el('td', { className: 'r', textContent: month ? `${p.gain > 0 ? '+' : ''}${p.gain}` : p.rating }));
+  }) : [el('tr', {}, el('td', { className: 'mute',
       textContent: month ? 'Chưa có trận xếp hạng nào trong tháng này.' : 'Chưa có ai. Hãy là người đầu tiên.' }))]));
 }
 document.querySelectorAll('[data-period]').forEach(b => b.onclick = () => { period = b.dataset.period; store.set('period', period); loadBoard(); });
@@ -730,7 +960,28 @@ function levelButtons(boxId, key, render) {
     return b;
   }));
 }
-const renderDrillLevels = () => levelButtons('drillLevels', 'drillLevel', lv => [el('small', { textContent: `kỷ lục ${store.get('best' + lv) || 0}` })]);
+function drillRecord(lv) { return Math.max(+store.get('best' + lv) || 0, me?.drillBest?.[lv] || 0); }
+function drillType() {
+  const t = store.get('drillType') || '';
+  return t === 'Hán → Việt' || t === 'Việt → Hán' || t === 'Nghe → nghĩa' ? t : '';
+}
+function practiceArgs(level) {
+  const type = drillType();
+  return type ? { level, type } : { level };
+}
+function renderDrillTypes() {
+  const cur = drillType();
+  document.querySelectorAll('#drillTypes [data-qtype]').forEach(b => {
+    b.setAttribute('aria-pressed', b.dataset.qtype === cur);
+    b.onclick = () => { store.set('drillType', b.dataset.qtype); renderDrillTypes(); };
+  });
+}
+function surviveRecord(lv) { return Math.max(Math.min(+store.get('survive' + lv) || 0, 300), me?.surviveBest?.[lv] || 0); }
+const renderDrillLevels = () => levelButtons('drillLevels', 'drillLevel', lv => [el('small', { textContent: `kỷ lục ${drillRecord(lv)}` })]);
+const renderSurviveLevels = () => levelButtons('surviveLevels', 'surviveLevel', lv => [el('small', { textContent: `kỷ lục ${surviveRecord(lv)}` })]);
+const renderExamLevels = () => { if ($('examLevels')) levelButtons('examLevels', 'examLevel', () => []); };
+const renderToneLevels = () => { if ($('toneLevels')) levelButtons('toneLevels', 'toneLevel', () => []); };
+const renderPpLevels = () => { if ($('ppLevels')) levelButtons('ppLevels', 'ppLevel', () => []); };
 let progress = null;
 const renderLearnLevels = () => { levelButtons('learnLevels', 'learnLevel', lv => {
   if (!progress) return [el('small', { textContent: '…' })];
@@ -797,7 +1048,9 @@ function renderQuestion(q, onPick) {
     play.innerHTML = ICON.on;
     play.onclick = () => speak(q.prompt);
     // Without a Chinese voice the question is unanswerable by ear, so fall back to pinyin.
-    p.replaceChildren(play, zhVoice ? el('span', { className: 'mute', textContent: 'Nghe lại: phím R' }) : el('span', { className: 'hintpy', textContent: q.hint }));
+    const hint = el('span', { className: 'hintpy' });
+    paintPy(hint, q.hint);
+    p.replaceChildren(play, zhVoice ? el('span', { className: 'mute', textContent: 'Nghe lại: phím R' }) : hint);
     box.className = 'mi listen';
     speak(q.prompt);
   } else {
@@ -826,7 +1079,7 @@ function markAnswer(answer, chosen) {
   if (chosen !== null && chosen !== answer) bs[chosen]?.classList.add('bad');
 }
 function showWord(w) {
-  $('reveal').replaceChildren(el('div', { className: 'py', textContent: w.p }), el('div', { className: 'vi', textContent: w.vi || w.m }));
+  $('reveal').replaceChildren(paintPy(el('div'), w.p), el('div', { className: 'vi', textContent: w.vi || w.m }));
 }
 function floatText(text, color) {
   const f = el('div', { className: 'float', textContent: text });
@@ -834,16 +1087,26 @@ function floatText(text, color) {
   $('qcard').append(f);
   setTimeout(() => f.remove(), 1000);
 }
-function runClock(ms, onLow) {
+function runClock(ms, onLow, onEnd) {
   clearInterval(clockTimer);
-  const bar = $('timebar'), end = Date.now() + ms;
+  const bar = $('timebar');
+  const long = ms > 60000;
+  const lowAt = long ? 10 : 3;
+  const fmt = s => long ? `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}` : `${s}s`;
+  if (ms <= 0) {
+    bar.style.transition = 'none'; bar.style.transform = 'scaleX(0)';
+    $('clock').textContent = fmt(0); $('clock').classList.add('low');
+    onEnd?.();
+    return;
+  }
+  const end = Date.now() + ms;
   bar.style.transition = 'none'; bar.style.transform = 'scaleX(1)';
   requestAnimationFrame(() => requestAnimationFrame(() => { bar.style.transition = `transform ${ms}ms linear`; bar.style.transform = 'scaleX(0)'; }));
-  let last = null;
+  let last = null, ended = false;
   const tick = () => {
     const s = Math.max(0, Math.ceil((end - Date.now()) / 1000));
-    if (s !== last) { last = s; $('clock').textContent = `${s}s`; $('clock').classList.toggle('low', s <= 3 && s > 0); if (s <= 3 && s > 0) onLow?.(); }
-    if (s === 0) clearInterval(clockTimer);
+    if (s !== last) { last = s; $('clock').textContent = fmt(s); $('clock').classList.toggle('low', s <= lowAt && s > 0); if (s <= lowAt && s > 0) onLow?.(); }
+    if (s === 0 && !ended) { ended = true; clearInterval(clockTimer); onEnd?.(); }
   };
   tick();
   clockTimer = setInterval(tick, 200);
@@ -876,11 +1139,21 @@ function enterGameHud(leftName, rightName) {
   $('hudOpp').textContent = rightName;
   $('ptsMe').textContent = $('ptsOpp').textContent = 0;
   $('drillExit').hidden = true;
+  $('drillExit').textContent = 'Kết thúc sớm';
   $('hudMeAv').hidden = $('hudOppAv').hidden = false;
+  $('opts').hidden = false;
+  $('pyRow').hidden = true;
+  $('fuse').hidden = false;
+  $('reacts').hidden = true;
+  $('turnNext').hidden = true;
+  $('opts').replaceChildren();
+  $('prompt').textContent = '';
+  $('reveal').replaceChildren();
 }
 socket.on('question', q => {
   if (mode === 'vs') { mode = 'pvp'; enterGameHud(me.name, opp.name); show('game'); }
   if (mode !== 'pvp') return;
+  $('reacts').hidden = false;
   $('roundLbl').textContent = `Câu ${q.n} / 10`;
   $('hudMeAv').classList.remove('done'); $('hudOppAv').classList.remove('done');
   $('gameHint').textContent = 'Phím 1–4 để chọn nhanh';
@@ -893,6 +1166,10 @@ socket.on('question', q => {
   runClock(q.ms, sfx.tick);
 });
 socket.on('oppAnswered', () => { $('hudOppAv').classList.add('done'); if (pickFn) vibrate(15); });
+socket.on('react', text => {
+  if (!REACTIONS.includes(text)) return;
+  if (!$('game').hidden) floatText(text, 'var(--gold)'); else toast(text);
+});
 socket.on('reveal', r => {
   if (mode !== 'pvp') return;
   pickFn = null;
@@ -922,11 +1199,14 @@ socket.on('end', d => {
   const win = d.result === 1, draw = d.result === 0.5;
   stampVerdict(win ? '胜' : draw ? '和' : '负', !win && !draw);
   $('endTitle').textContent = win ? 'Thắng' : draw ? 'Hoà' : 'Thua';
-  $('endSub').textContent = (d.forfeit ? (d.left ? 'Bạn đã rời trận. ' : 'Đối thủ đã rời trận. ') : '') + `${d.score} – ${d.oppScore} điểm`;
+  $('endSub').textContent = (d.forfeit ? (d.left ? 'Bạn đã rời trận. ' : 'Đối thủ đã rời trận. ') : '') + `${d.score} – ${d.oppScore} điểm` + (d.perfect ? ' · không sai câu nào' : '');
+  const deltaText = d.ranked ? `${d.delta >= 0 ? '+' : ''}${d.delta} Elo · ${d.me.rating}` : 'Giao hữu';
   if (d.ranked) countUp($('endDelta'), d.delta, v => `${v >= 0 ? '+' : ''}${v} Elo · ${d.me.rating} · ${d.me.rank}`);
   else $('endDelta').textContent = 'Trận giao hữu · không tính Elo';
   $('endDelta').style.color = d.delta > 0 ? 'var(--jade)' : d.delta < 0 ? 'var(--red)' : '';
   $('againPlayBtn').textContent = d.ranked ? 'Đấu tiếp' : 'Tìm trận xếp hạng';
+  prepareEnd(!d.ranked);
+  setShare([win ? 'Thắng' : draw ? 'Hoà' : 'Thua', `${d.score} – ${d.oppScore} điểm`, deltaText]);
   renderReview(review);
   show('end');
   if (win) { sfx.win(); vibrate([80, 50, 80, 50, 160]); } else if (!draw) sfx.lose();
@@ -942,7 +1222,7 @@ function renderReview(words) {
     const sp = speakerButton(`Nghe ${w.h}`);
     sp.onclick = () => speak(w.h);
     return el('tr', {}, el('td', { className: 'hz', lang: 'zh', textContent: w.h }),
-      el('td', {}, el('div', { className: 'py', textContent: w.p }), el('div', { className: 'mute', textContent: w.vi || w.m })),
+      el('td', {}, paintPy(el('div'), w.p), el('div', { className: 'mute', textContent: w.vi || w.m })),
       el('td', { className: 'sp' }, sp));
   }) : [el('tr', {}, el('td', { className: 'mute', textContent: 'Không sai câu nào.' }))]));
 }
@@ -950,12 +1230,18 @@ $('homeBtn').onclick = home;
 $('againPlayBtn').onclick = () => {
   if (mode === 'end-pvp') { home(); tab('pvp'); startSearch(); }
   else if (mode === 'end-drill') startDrill();
+  else if (mode === 'end-survive') startSurvive();
+  else if (mode === 'end-tone') startTone();
+  else if (mode === 'end-pp') startPass();
+  else if (mode === 'end-exam') startExam();
+  else if (mode === 'end-daily') { store.set('tab', 'try'); home(); }
+  else if (mode === 'end-py') startPinyin();
   else home();
 };
 
 /* ---------- Reflex drill ---------- */
 const DRILL_MS = 60000;
-let drill = null;
+let drill = null, dailyState = null, exam = null, py = null, tone = null, survive = null, pp = null;
 function startDrill() {
   stopSearch();
   const level = +store.get('drillLevel') || 1;
@@ -977,7 +1263,7 @@ $('drillStart').onclick = startDrill;
 async function nextDrill() {
   if (mode !== 'drill') return;
   const id = drill.id;
-  const q = await call('practice', { level: drill.level });
+  const q = await call('practice', practiceArgs(drill.level));
   if (mode !== 'drill' || drill.id !== id) return;
   if (q.error) { toast(q.error); return setTimeout(nextDrill, 1000); }
   renderQuestion(q, i => {
@@ -1000,25 +1286,34 @@ async function nextDrill() {
     $('roundLbl').textContent = drill.streak >= 2 ? `Chuỗi ×${drill.streak}` : 'Thời gian';
   });
 }
-$('drillExit').onclick = () => endDrill();
-function endDrill() {
-  if (mode !== 'drill') return;
+$('drillExit').onclick = leaveGame;
+async function endDrill() {
+  if (mode !== 'drill' || !drill) return;
+  const snap = drill;
+  drill = null;
+  mode = 'end-drill';
   stopClock();
   $('drillExit').hidden = true;
-  mode = 'end-drill';
-  const key = 'best' + drill.level, prev = +store.get(key) || 0, best = Math.max(drill.score, prev);
+  const key = 'best' + snap.level;
+  const before = Math.max(Math.min(+store.get(key) || 0, 300), me?.drillBest?.[snap.level] || 0);
+  let best = Math.max(snap.score, before);
+  if (snap.score >= 1 && snap.score <= 300) {
+    const res = await call('drillBest', { level: snap.level, score: snap.score });
+    if (res?.drillBest) { if (me) me.drillBest = res.drillBest; best = Math.max(best, res.drillBest[snap.level] || 0); }
+  }
   store.set(key, best);
-  const record = drill.score > prev && drill.score > 0;
-  stampVerdict(record ? '最' : String(drill.score).length < 3 ? drill.score : '速', false);
-  $('endTitle').textContent = `${drill.score} câu đúng`;
-  $('endSub').textContent = `${hskLabel(drill.level)} · chuỗi dài nhất ${drill.bestStreak}`;
+  const record = snap.score > before && snap.score > 0;
+  stampVerdict(record ? '最' : String(snap.score).length < 3 ? snap.score : '速', false);
+  $('endTitle').textContent = `${snap.score} câu đúng`;
+  $('endSub').textContent = `${hskLabel(snap.level)} · chuỗi dài nhất ${snap.bestStreak}`;
   $('endDelta').textContent = record ? 'Kỷ lục mới' : `Kỷ lục: ${best}`;
   $('endDelta').style.color = record ? 'var(--red)' : '';
   $('againPlayBtn').textContent = 'Chơi lại';
-  renderReview(drill.wrong);
+  prepareEnd(false);
+  setShare(['Luyện phản xạ ' + hskLabel(snap.level), `${snap.score} câu đúng`, record ? 'Kỷ lục mới' : `Kỷ lục ${best}`]);
+  renderReview(snap.wrong);
   show('end');
   if (record) sfx.win();
-  drill = null;
 }
 
 /* ---------- Learn (flashcards) ---------- */
@@ -1058,6 +1353,8 @@ async function loadDeck() {
     $('endTitle').textContent = 'Hoàn thành';
     $('endSub').textContent = learn.review ? 'Không còn từ sai nào để ôn.' : `Bạn đã thuộc hết ${res.total} từ ${hskLabel(learn.level)}.`;
     $('endDelta').textContent = ''; $('againPlayBtn').textContent = 'Về sảnh';
+    prepareEnd(false);
+    setShare([learn.review ? 'Ôn từ' : 'Học từ ' + hskLabel(learn.level), 'Hoàn thành', learn.review ? 'Hết từ sai' : `Đã thuộc ${res.total} từ`]);
     renderReview([]); show('end'); sfx.win();
     return false;
   }
@@ -1072,7 +1369,7 @@ function showCard() {
   $('cardsBar').style.width = learn.review ? '0' : `${learn.learned / learn.total * 100}%`;
   $('fHz').textContent = $('bHz').textContent = w.h;
   $('fBox').className = 'mi' + (w.h.length > 1 ? ' wide' : '') + (w.h.length > 3 ? ' xl' : '');
-  $('bPy').textContent = w.p;
+  paintPy($('bPy'), w.p);
   $('bVi').textContent = w.vi || w.m;
   $('bEn').textContent = w.en;
   $('rateBtns').hidden = true;
@@ -1089,6 +1386,8 @@ function rate(known) {
     learn.learned++;
     learn.left--;
     call('learned', { id: w.id, known: true }).then(r => r.error && toast(r.error));
+    knownSession++;
+    renderGoal();
     sfx.ok(); vibrate(15);
   } else {
     learn.deck.splice(Math.min(3, learn.deck.length), 0, w); // see it again soon, not immediately
@@ -1102,10 +1401,867 @@ $('knowBtn').onclick = () => rate(true);
 $('againBtn').onclick = () => rate(false);
 $('cardsExit').onclick = () => { home(); tab('learn'); };
 
+/* ---------- Presence, challenges, study extras ---------- */
+let knownSession = 0;
+const GOAL = 10;
+const REACTIONS = ['加油', '厉害', '谢谢'];
+let shareLines = [], reactAt = 0, wotdWord = null, wotdDay = null, wotdOpen = false;
+const TONE_MARK = { ā: 'a1', á: 'a2', ǎ: 'a3', à: 'a4', ē: 'e1', é: 'e2', ě: 'e3', è: 'e4', ī: 'i1', í: 'i2', ǐ: 'i3', ì: 'i4', ō: 'o1', ó: 'o2', ǒ: 'o3', ò: 'o4', ū: 'u1', ú: 'u2', ǔ: 'u3', ù: 'u4', ǖ: 'v1', ǘ: 'v2', ǚ: 'v3', ǜ: 'v4', ń: 'n2', ň: 'n3', ǹ: 'n4' };
+const PINYIN_INITIALS = ['zh', 'ch', 'sh', 'b', 'p', 'm', 'f', 'd', 't', 'n', 'l', 'g', 'k', 'h', 'j', 'q', 'x', 'r', 'z', 'c', 's', 'y', 'w'];
+const PINYIN_FINALS = ['iang', 'iong', 'uang', 'ueng', 'ang', 'eng', 'ing', 'ong', 'iao', 'ian', 'uan', 'uai', 'van', 'ia', 'ie', 'iu', 'in', 'un', 'ui', 'ua', 'uo', 'ue', 've', 'ai', 'ei', 'ao', 'ou', 'an', 'en', 'er', 'vn', 'ng', 'a', 'o', 'e', 'i', 'u', 'v', 'n', 'm'];
+function toneIndex(final) {
+  const a = final.indexOf('a'); if (a >= 0) return a;
+  const e = final.indexOf('e'); if (e >= 0) return e;
+  if (final.includes('ou')) return final.indexOf('o');
+  for (let i = final.length - 1; i >= 0; i--) if ('aeiouüv'.includes(final[i])) return i;
+  return -1;
+}
+function withTone(final, tone) {
+  if (!tone || tone === '5') return final;
+  const i = toneIndex(final);
+  if (i < 0) return final;
+  return final.slice(0, i + 1) + tone + final.slice(i + 1);
+}
+// Same rule as game.js samePinyin. The page has no module import, so the check lives here too.
+function samePinyin(a, b) {
+  const canon = raw => {
+    let t = String(raw ?? '').normalize('NFC').toLowerCase().replace(/u:/g, 'v').replace(/ü/g, 'v');
+    t = t.replace(/[·.•_-]+/g, '').replace(/’/g, "'");
+    let letters = '';
+    const inline = [], breaks = new Set(), trails = [];
+    for (const ch of t) {
+      if (ch === "'" || ch === ' ') { breaks.add(letters.length); continue; }
+      if (ch >= '1' && ch <= '5') { trails.push({ at: letters.length, tone: ch }); continue; }
+      const marked = TONE_MARK[ch];
+      if (marked) { letters += marked[0]; inline[letters.length - 1] = marked[1]; continue; }
+      if (ch >= 'a' && ch <= 'z') letters += ch;
+    }
+    const initials = [...PINYIN_INITIALS].sort((x, y) => y.length - x.length);
+    const finals = [...PINYIN_FINALS].sort((x, y) => y.length - x.length);
+    const crosses = (from, end) => [...breaks].some(b => b > from && b < end) || trails.some(tr => tr.at > from && tr.at < end);
+    let i = 0, out = '';
+    while (i < letters.length) {
+      let ini = '';
+      for (const s of initials) if (letters.startsWith(s, i) && finals.some(f => letters.startsWith(f, i + s.length))) { ini = s; break; }
+      const from = i + ini.length;
+      let fin = '';
+      for (const f of finals) {
+        if (!letters.startsWith(f, from) || crosses(from, from + f.length)) continue;
+        fin = f; break;
+      }
+      if (!fin) { out += letters[i]; i++; continue; }
+      let end = from + fin.length;
+      let er = '';
+      if (letters[end] === 'r' && !breaks.has(end) && !finals.some(f => letters.startsWith(f, end + 1))) er = 'r';
+      end += er.length;
+      let tone = '';
+      for (let k = from; k < end - er.length; k++) if (inline[k]) tone = inline[k];
+      tone = tone || trails.find(tr => tr.at === end)?.tone || '';
+      out += ini + withTone(fin, tone) + er;
+      i = end;
+    }
+    return out;
+  };
+  const x = canon(a), y = canon(b);
+  return x.length > 0 && x === y;
+}
+// Same syllable split as game.js pinyinSyllables. The mark or the digit stays on the letter.
+function pinyinSyllables(raw) {
+  const src = String(raw ?? '').normalize('NFC');
+  let letters = '';
+  const inline = [];
+  const spans = [];
+  const trails = [];
+  const breaks = new Set();
+  let i = 0;
+  while (i < src.length) {
+    if (src.slice(i, i + 2).toLowerCase() === 'u:') { letters += 'v'; spans.push([i, i + 2]); i += 2; continue; }
+    const ch = src[i];
+    const low = ch.toLowerCase();
+    if (low === "'" || ch === '’' || low === ' ') { breaks.add(letters.length); i++; continue; }
+    if (low.length === 1 && low >= '1' && low <= '5') { trails.push({ at: letters.length, tone: low, start: i, end: i + 1 }); i++; continue; }
+    const marked = low.length === 1 ? TONE_MARK[low] : null;
+    if (marked) { letters += marked[0]; inline[letters.length - 1] = marked[1]; spans.push([i, i + 1]); i++; continue; }
+    if (low === 'ü') { letters += 'v'; spans.push([i, i + 1]); i++; continue; }
+    if (low.length === 1 && low >= 'a' && low <= 'z') { letters += low; spans.push([i, i + 1]); i++; continue; }
+    i++;
+  }
+  const initials = [...PINYIN_INITIALS].sort((a, b) => b.length - a.length);
+  const finals = [...PINYIN_FINALS].sort((a, b) => b.length - a.length);
+  const crosses = (from, end) => [...breaks].some(b => b > from && b < end) || trails.some(tr => tr.at > from && tr.at < end);
+  const syl = [];
+  let n = 0;
+  while (n < letters.length) {
+    let ini = '';
+    for (const s of initials) if (letters.startsWith(s, n) && finals.some(f => letters.startsWith(f, n + s.length))) { ini = s; break; }
+    const from = n + ini.length;
+    let fin = '';
+    for (const f of finals) {
+      if (!letters.startsWith(f, from) || crosses(from, from + f.length)) continue;
+      fin = f;
+      break;
+    }
+    if (!fin) { syl.push({ tone: inline[n] ? +inline[n] : 5, start: spans[n][0], end: spans[n][1] }); n++; continue; }
+    let end = from + fin.length;
+    let er = '';
+    if (letters[end] === 'r' && !breaks.has(end) && !finals.some(f => letters.startsWith(f, end + 1))) er = 'r';
+    end += er.length;
+    let tone = '';
+    for (let k = from; k < end - er.length; k++) if (inline[k]) tone = inline[k];
+    const hooked = trails.filter(tr => tr.at === end);
+    tone = tone || hooked[0]?.tone || '';
+    let stop = spans[end - 1][1];
+    if (hooked.length && hooked[0].start === stop) stop = hooked[hooked.length - 1].end;
+    syl.push({ tone: !tone || tone === '5' ? 5 : +tone, start: spans[n][0], end: stop });
+    n = end;
+  }
+  const parts = [];
+  let cursor = 0;
+  for (const s of syl) {
+    if (s.start > cursor) parts.push({ text: src.slice(cursor, s.start), tone: 0 });
+    if (s.end > s.start) parts.push({ text: src.slice(s.start, s.end), tone: s.tone });
+    cursor = Math.max(cursor, s.end);
+  }
+  if (cursor < src.length) parts.push({ text: src.slice(cursor), tone: 0 });
+  return parts;
+}
+const TONE_LABEL = { 1: 'thanh 1', 2: 'thanh 2', 3: 'thanh 3', 4: 'thanh 4', 5: 'thanh nhẹ' };
+function paintPy(node, pinyin) {
+  const parts = pinyinSyllables(String(pinyin ?? ''));
+  node.classList.add('py');
+  if (!parts.length) { node.textContent = pinyin || ''; return node; }
+  node.replaceChildren(...parts.map(part => {
+    const tone = part.tone >= 1 && part.tone <= 5 ? part.tone : 0;
+    const s = el('span', { className: 't' + tone, textContent: part.text });
+    if (tone) { s.title = TONE_LABEL[tone]; s.setAttribute('aria-label', `${part.text}, ${TONE_LABEL[tone]}`); }
+    return s;
+  }));
+  return node;
+}
+function renderPresence(p) {
+  if (!p || !$('presence')) return;
+  $('presence').textContent = `${p.online} đang online · ${p.queued} đang tìm trận`;
+}
+socket.on('presence', renderPresence);
+function renderGoal() {
+  if (!$('goalBar')) return;
+  const n = Math.min(knownSession, GOAL);
+  $('goalBar').style.width = `${(n / GOAL) * 100}%`;
+  $('goalText').textContent = knownSession >= GOAL ? `Hôm nay đã đủ ${GOAL} từ` : `Hôm nay ${knownSession}/${GOAL} từ`;
+}
+async function askChallenge(pid) {
+  if (!pid || pid === me?.pid) return;
+  const r = await call('challenge', { pid });
+  if (r.error) toast(r.error); else toast('Đã gửi lời thách đấu. Trận giao hữu, không tính Elo.');
+}
+socket.on('challenge', c => {
+  $('challengeText').textContent = `${c.name} muốn đấu giao hữu. Không tính Elo.`;
+  $('challenge').hidden = false;
+  sfx.found();
+});
+socket.on('challengeClosed', () => { $('challenge').hidden = true; });
+$('challengeYes').onclick = async () => {
+  $('challenge').hidden = true;
+  const r = await call('accept');
+  if (r.error) toast(r.error);
+};
+$('challengeNo').onclick = async () => { $('challenge').hidden = true; await call('decline'); };
+document.querySelectorAll('[data-react]').forEach(b => b.onclick = () => {
+  if (mode !== 'pvp' || Date.now() - reactAt < 800) return;
+  reactAt = Date.now();
+  socket.emit('react', b.dataset.react);
+});
+function vnDayLabel(day) {
+  const [, m, d] = String(day || '').split('-');
+  return d ? `${+d} tháng ${+m}` : '';
+}
+function renderWotd(res) {
+  if (wotdDay !== res.day) { wotdOpen = false; wotdDay = res.day; }
+  wotdWord = res.word;
+  $('wotdDate').textContent = vnDayLabel(res.day);
+  $('wotdHz').textContent = res.word.h;
+  $('wotdBox').className = 'mi' + (res.word.h.length > 1 ? ' wide' : '') + (res.word.h.length > 3 ? ' xl' : '');
+  paintPy($('wotdPy'), res.word.p);
+  $('wotdVi').textContent = res.word.vi || res.word.m;
+  $('wotdEn').textContent = res.word.en || '';
+  $('wotdBack').hidden = !wotdOpen;
+  $('wotdBtn').textContent = wotdOpen ? 'Nghe lại' : 'Xem nghĩa';
+}
+function revealWotd() {
+  if (!wotdWord) return;
+  wotdOpen = true;
+  $('wotdBack').hidden = false;
+  $('wotdBtn').textContent = 'Nghe lại';
+  speak(wotdWord.h);
+}
+function renderDailyHome(res) {
+  if (res.mine) {
+    $('dailyStatus').textContent = `Hôm nay ${res.mine.correct}/${res.total} đúng · ${res.mine.score} điểm`;
+    $('dailyStart').disabled = true;
+    $('dailyStart').textContent = 'Đã xong hôm nay';
+  } else if (res.attempt) {
+    $('dailyStatus').textContent = `Đang dở câu ${res.attempt.n}/${res.total} · đúng ${res.attempt.correct}`;
+    $('dailyStart').disabled = false;
+    $('dailyStart').textContent = 'Làm tiếp';
+  } else {
+    $('dailyStatus').textContent = 'Chưa làm. Một lượt, tính đến khi nộp xong.';
+    $('dailyStart').disabled = false;
+    $('dailyStart').textContent = 'Bắt đầu';
+  }
+}
+function renderDailyBoard(list) {
+  $('dailyBoard').replaceChildren(...(list?.length ? list.map((p, i) => el('tr', { className: p.pid === me?.pid ? 'me' : '' },
+    el('td', { className: 'n', textContent: i + 1 }),
+    el('td', {}, el('span', { className: 'seal sm', textContent: p.seal || initial(p.name) }), p.name),
+    el('td', { className: 'r', textContent: `${p.correct}/10` }))) : [el('tr', {}, el('td', { className: 'mute', textContent: 'Chưa ai hoàn thành hôm nay.' }))]));
+}
+async function loadTry() {
+  renderExamLevels();
+  renderToneLevels();
+  loadGroup();
+  const res = await call('daily');
+  if (res.error) return;
+  renderWotd(res);
+  renderDailyHome(res);
+  renderDailyBoard(res.board);
+}
+$('wotdBtn').onclick = revealWotd;
+$('wotdBox').onclick = revealWotd;
+const wait = ms => new Promise(r => setTimeout(r, ms));
+async function showDailyReveal(res) {
+  const r = res.reveal;
+  if (!r || !dailyState) return;
+  if (Number.isInteger(res.correct)) $('ptsMe').textContent = res.correct;
+  if (Number.isInteger(res.score)) $('ptsOpp').textContent = res.score;
+  const buttons = [...$('opts').children];
+  const onScreen = buttons.length === 4 && !$('game').hidden && mode === 'daily';
+  if (onScreen) {
+    markAnswer(r.answer, r.you);
+    if (!r.ok && r.you !== null && r.you === r.answer) {
+      const b = buttons[r.answer];
+      b?.classList.remove('ok');
+      b?.classList.add('bad');
+    }
+    showWord(r.word);
+    if (r.ok) { sfx.ok(); vibrate(20); if (r.gain) floatText(`+${r.gain}`); }
+    else {
+      sfx.bad(); vibrate([40, 30, 40]);
+      if (r.you === null) floatText('hết giờ', 'var(--red)');
+      else if (r.you === r.answer) floatText('quá giờ', 'var(--red)');
+    }
+    await wait(r.ok ? 400 : 900);
+  } else if (!r.ok && r.word) toast(`${r.word.h} hết giờ · ${r.word.vi || r.word.m}`);
+  if (!r.ok && r.word) dailyState.wrong.push(r.word);
+}
+function showDailyQ(q) {
+  $('ptsMe').textContent = q.correct ?? 0;
+  $('ptsOpp').textContent = q.score ?? 0;
+  $('roundLbl').textContent = `Câu ${q.n} / ${q.total}`;
+  $('gameHint').textContent = 'Phím 1–4 · hết giờ thì câu không tính';
+  let sent = false;
+  const send = i => {
+    if (sent || mode !== 'daily') return;
+    sent = true;
+    pickFn = null;
+    stopClock();
+    [...$('opts').children].forEach(b => b.disabled = true);
+    if (i !== null) $('opts').children[i]?.classList.add('picked');
+    call('dailyAnswer', { i }).then(res => {
+      if (mode !== 'daily') return;
+      if (res.error) { toast(res.error); return home(); }
+      openDaily(res);
+    });
+  };
+  renderQuestion(q, i => send(i));
+  runClock(q.ms, sfx.tick, () => send(null));
+}
+async function openDaily(r) {
+  if (r.reveal) await showDailyReveal(r);
+  if (mode !== 'daily') return;
+  if (r.done) return endDaily(r);
+  showDailyQ(r.next || r);
+}
+function endDaily(r) {
+  stopClock();
+  mode = 'end-daily';
+  if (r.me) renderMe(r.me);
+  const perfect = r.correct === r.total;
+  stampVerdict(perfect ? '完' : '日', false);
+  const rank = (r.board || []).findIndex(p => p.pid === me?.pid);
+  $('endTitle').textContent = perfect ? 'Đủ 10/10' : `${r.correct}/${r.total} đúng`;
+  $('endSub').textContent = `${r.score} điểm` + (rank >= 0 ? ` · hạng ${rank + 1} hôm nay` : '');
+  $('endDelta').textContent = 'Thử thách ngày · không tính Elo';
+  $('endDelta').style.color = '';
+  $('againPlayBtn').textContent = 'Về thử thách';
+  prepareEnd(false);
+  setShare(['Thử thách ngày', `${r.correct}/${r.total} đúng`, `${r.score} điểm`]);
+  renderReview(dailyState?.wrong || []);
+  show('end');
+  if (perfect) sfx.win();
+  dailyState = null;
+}
+async function startDaily() {
+  stopSearch();
+  const r = await call('dailyBegin');
+  if (r.error) return toast(r.error);
+  dailyState = { wrong: [] };
+  mode = 'daily';
+  enterGameHud('Đúng', 'Điểm');
+  $('ptsMe').textContent = r.correct ?? r.next?.correct ?? 0;
+  $('ptsOpp').textContent = r.score ?? r.next?.score ?? 0;
+  $('hudMeAv').hidden = $('hudOppAv').hidden = true;
+  $('drillExit').hidden = true;
+  show('game');
+  await openDaily(r);
+}
+$('dailyStart').onclick = async () => {
+  if ($('dailyStart').disabled) return;
+  $('dailyStart').disabled = true;
+  try { await startDaily(); }
+  finally { if (mode !== 'daily') $('dailyStart').disabled = false; }
+};
+const EXAM_N = 15, EXAM_MS = 180000, EXAM_PASS = 12;
+async function startExam() {
+  stopSearch();
+  exam = { level: +store.get('examLevel') || 1, i: 0, correct: 0, wrong: [], id: Symbol() };
+  mode = 'exam';
+  enterGameHud('Câu', 'Mốc đạt');
+  $('ptsOpp').textContent = EXAM_PASS;
+  $('hudMeAv').hidden = $('hudOppAv').hidden = true;
+  $('drillExit').hidden = false;
+  $('drillExit').textContent = 'Nộp bài';
+  $('roundLbl').textContent = 'Kiểm tra';
+  show('game');
+  runClock(EXAM_MS, sfx.tick, () => finishExam());
+  nextExam();
+}
+async function nextExam() {
+  if (mode !== 'exam' || !exam) return;
+  if (exam.i >= EXAM_N) return finishExam();
+  const id = exam.id;
+  $('ptsMe').textContent = `${exam.i + 1}/${EXAM_N}`;
+  $('gameHint').textContent = 'Chưa chấm vội · phím 1–4 · nộp khi xong';
+  const q = await call('practice', { level: exam.level });
+  if (mode !== 'exam' || !exam || exam.id !== id) return;
+  if (q.error) { toast(q.error); return setTimeout(nextExam, 1000); }
+  renderQuestion(q, choice => {
+    if (mode !== 'exam' || !exam || exam.id !== id) return;
+    if (choice === q.answer) exam.correct++;
+    else exam.wrong.push(q.word);
+    exam.i++;
+    nextExam();
+  });
+}
+function finishExam() {
+  if (mode !== 'exam' || !exam) return;
+  const snap = exam;
+  exam = null;
+  mode = 'end-exam';
+  stopClock();
+  pickFn = null;
+  $('drillExit').hidden = true;
+  for (const w of snap.wrong) if (w?.id) socket.emit('missed', w.id);
+  const pass = snap.correct >= EXAM_PASS;
+  stampVerdict(pass ? '过' : '习', !pass);
+  $('endTitle').textContent = `${snap.correct}/${EXAM_N} câu đúng`;
+  $('endSub').textContent = `${hskLabel(snap.level)} · ${pass ? 'Đạt' : `Chưa đạt · cần ${EXAM_PASS} câu`}`;
+  $('endDelta').textContent = 'Bài kiểm tra · không ảnh hưởng rank';
+  $('endDelta').style.color = pass ? 'var(--jade)' : '';
+  $('againPlayBtn').textContent = 'Làm lại';
+  prepareEnd(false);
+  setShare(['Kiểm tra ' + hskLabel(snap.level), `${snap.correct}/${EXAM_N} câu đúng`, pass ? 'Đạt' : 'Chưa đạt']);
+  renderReview(snap.wrong);
+  show('end');
+  if (pass) sfx.win(); else sfx.lose();
+}
+$('examStart').onclick = startExam;
+function startPinyin() {
+  stopSearch();
+  py = { level: +store.get('learnLevel') || 1, right: 0, wrong: 0, word: null, busy: false, id: Symbol() };
+  mode = 'py';
+  enterGameHud('Đúng', 'Sai');
+  $('opts').hidden = true;
+  $('pyRow').hidden = false;
+  $('fuse').hidden = true;
+  $('clock').textContent = '—';
+  $('hudMeAv').hidden = $('hudOppAv').hidden = true;
+  $('drillExit').hidden = false;
+  $('roundLbl').textContent = 'Gõ pinyin';
+  $('gameHint').textContent = 'Dấu thanh hoặc số, không phân biệt hoa thường';
+  show('game');
+  nextPinyin();
+}
+async function nextPinyin() {
+  if (mode !== 'py' || !py) return;
+  const id = py.id;
+  const q = await call('practice', { level: py.level });
+  if (mode !== 'py' || !py || py.id !== id) return;
+  if (q.error) { toast(q.error); return setTimeout(nextPinyin, 1000); }
+  py.word = q.word;
+  py.busy = false;
+  const text = q.word.h;
+  $('prompt').textContent = text;
+  $('prompt').lang = 'zh';
+  $('miBox').className = 'mi' + (text.length > 1 ? ' wide' : '') + (text.length > 3 ? ' xl' : '') + ' ink';
+  $('qType').textContent = `Gõ pinyin · ${hskLabel(py.level)}`;
+  $('reveal').replaceChildren(el('div', { className: 'vi', textContent: q.word.vi || q.word.m }));
+  $('ptsMe').textContent = py.right;
+  $('ptsOpp').textContent = py.wrong;
+  $('pyInput').disabled = false;
+  $('pyInput').value = '';
+  $('pyInput').focus();
+}
+function gradePinyin() {
+  if (mode !== 'py' || !py?.word || py.busy) return;
+  const word = py.word;
+  const ok = samePinyin($('pyInput').value, word.p);
+  py.busy = true;
+  $('pyInput').disabled = true;
+  $('reveal').replaceChildren(paintPy(el('div'), word.p), el('div', { className: 'vi', textContent: word.vi || word.m }));
+  if (ok) { py.right++; $('ptsMe').textContent = py.right; sfx.ok(); vibrate(15); setTimeout(nextPinyin, 350); }
+  else { py.wrong++; $('ptsOpp').textContent = py.wrong; socket.emit('missed', word.id); sfx.bad(); vibrate([40, 30, 40]); setTimeout(nextPinyin, 900); }
+}
+function endPinyin() {
+  if (mode !== 'py' || !py) return;
+  const snap = py;
+  py = null;
+  mode = 'end-py';
+  stopClock();
+  $('drillExit').hidden = true;
+  stampVerdict(snap.right ? '拼' : '习', !snap.right);
+  $('endTitle').textContent = `${snap.right} từ đúng`;
+  $('endSub').textContent = `${hskLabel(snap.level)} · sai ${snap.wrong}`;
+  $('endDelta').textContent = 'Gõ pinyin · không ảnh hưởng rank';
+  $('endDelta').style.color = '';
+  $('againPlayBtn').textContent = 'Gõ tiếp';
+  prepareEnd(false);
+  setShare(['Gõ pinyin ' + hskLabel(snap.level), `${snap.right} từ đúng`, `Sai ${snap.wrong}`]);
+  renderReview([]);
+  show('end');
+}
+$('pyStart').onclick = startPinyin;
+$('pyRow').onsubmit = e => { e.preventDefault(); gradePinyin(); };
+$('drillExit').onclick = leaveGame;
+function prepareEnd(rematch) { $('rematchBtn').hidden = !rematch; }
+function setShare(lines) { shareLines = lines; }
+function drawCard(lines) {
+  const c = document.createElement('canvas');
+  c.width = 840; c.height = 480;
+  const g = c.getContext('2d');
+  const css = getComputedStyle(document.documentElement);
+  const paper = css.getPropertyValue('--paper').trim() || '#f3eee3';
+  const ink = css.getPropertyValue('--ink').trim() || '#1b1916';
+  const red = css.getPropertyValue('--red').trim() || '#b3301e';
+  const mute = css.getPropertyValue('--mute').trim() || '#857c6f';
+  g.fillStyle = paper; g.fillRect(0, 0, c.width, c.height);
+  g.fillStyle = red; g.fillRect(0, 0, c.width, 8); g.fillRect(64, 56, 72, 72);
+  g.fillStyle = paper; g.font = '700 40px "Noto Serif SC", serif'; g.textAlign = 'center'; g.fillText('汉', 100, 106);
+  g.textAlign = 'left'; g.fillStyle = ink; g.font = '700 28px "Noto Serif", Georgia, serif'; g.fillText('HanziDuel', 156, 100);
+  g.font = '700 52px "Noto Serif", Georgia, serif'; g.fillText(lines[0] || '', 64, 230);
+  g.font = '500 26px "Be Vietnam Pro", sans-serif'; g.fillText(lines[1] || '', 64, 290);
+  g.fillStyle = red; g.fillText(lines[2] || '', 64, 342);
+  g.fillStyle = mute; g.font = '500 18px "Be Vietnam Pro", sans-serif'; g.fillText('hanziduel.com', 64, 420);
+  return new Promise(resolve => c.toBlob(resolve, 'image/png'));
+}
+$('shareBtn').onclick = async () => {
+  const text = ['HanziDuel', ...shareLines, 'https://hanziduel.com'].filter(Boolean).join('\n');
+  try {
+    const blob = await drawCard(shareLines);
+    if (blob) {
+      const file = new File([blob], 'hanziduel.png', { type: 'image/png' });
+      if (navigator.canShare?.({ files: [file] })) { await navigator.share({ files: [file], text, title: 'HanziDuel' }); return; }
+    }
+  } catch (e) { if (e?.name === 'AbortError') return; }
+  try { await navigator.clipboard.writeText(text); toast('Đã sao chép kết quả.'); }
+  catch { toast(text); }
+};
+$('rematchBtn').onclick = () => askChallenge(me?.recent?.[0]?.pid);
+
+/* ---------- Tone drill, survival, pass-and-play, family, group, notebook ---------- */
+const TONE_CHOICES = ['Thanh 1', 'Thanh 2', 'Thanh 3', 'Thanh 4', 'Thanh nhẹ'];
+function toneQuestions(pinyin) {
+  return pinyinSyllables(pinyin).filter(s => s.tone >= 1 && s.tone <= 5).map(s => ({
+    text: s.text,
+    tone: s.tone,
+    options: TONE_CHOICES,
+    answer: s.tone === 5 ? 4 : s.tone - 1,
+  }));
+}
+function leaveGame() {
+  if (mode === 'exam') finishExam();
+  else if (mode === 'py') endPinyin();
+  else if (mode === 'tone') endTone();
+  else if (mode === 'survive') endSurvive();
+  else if (mode === 'pp' || mode === 'pp-hand') endPass();
+  else endDrill();
+}
+function startTone() {
+  stopSearch();
+  stopClock();
+  tone = { level: +store.get('toneLevel') || 1, right: 0, wrong: 0, queue: [], si: 0, word: null, id: Symbol(), timer: null, marked: false };
+  mode = 'tone';
+  enterGameHud('Đúng', 'Sai');
+  $('ptsMe').textContent = 0;
+  $('ptsOpp').textContent = 0;
+  $('hudMeAv').hidden = $('hudOppAv').hidden = true;
+  $('drillExit').hidden = false;
+  $('drillExit').textContent = 'Kết thúc';
+  $('fuse').hidden = true;
+  $('clock').textContent = '—';
+  $('roundLbl').textContent = 'Thanh điệu';
+  $('gameHint').textContent = 'Phím 1–5';
+  show('game');
+  nextToneWord();
+}
+async function nextToneWord() {
+  if (mode !== 'tone' || !tone) return;
+  const id = tone.id;
+  for (let n = 0; n < 8; n++) {
+    const q = await call('practice', { level: tone.level });
+    if (mode !== 'tone' || !tone || tone.id !== id) return;
+    if (q.error) { toast(q.error); tone.timer = setTimeout(nextToneWord, 800); return; }
+    if (!q.word?.p || q.word.p.includes('/')) continue;
+    const queue = toneQuestions(q.word.p);
+    if (!queue.length) continue;
+    tone.word = q.word;
+    tone.queue = queue;
+    tone.si = 0;
+    tone.marked = false;
+    return showTone();
+  }
+  toast('Không tách được thanh của từ này.');
+}
+function showTone() {
+  if (mode !== 'tone' || !tone) return;
+  const word = tone.word;
+  const q = tone.queue[tone.si];
+  const total = tone.queue.length;
+  const i = tone.si;
+  $('qType').textContent = `Âm ${i + 1}/${total} · ${hskLabel(tone.level)}`;
+  $('prompt').lang = 'zh';
+  const chars = [...word.h];
+  if (chars.length === total) $('prompt').replaceChildren(...chars.map((ch, k) => el('span', { textContent: ch, style: k === i ? '' : 'opacity:.28' })));
+  else $('prompt').textContent = word.h;
+  $('miBox').className = 'mi' + (word.h.length > 1 ? ' wide' : '') + (word.h.length > 3 ? ' xl' : '') + ' ink';
+  $('reveal').replaceChildren();
+  $('clock').textContent = '—';
+  $('roundLbl').textContent = total > 1 ? `Âm ${i + 1}/${total}` : 'Thanh điệu';
+  $('ptsMe').textContent = tone.right;
+  $('ptsOpp').textContent = tone.wrong;
+  $('opts').hidden = false;
+  pickFn = choice => gradeTone(choice);
+  $('opts').replaceChildren(...q.options.map((o, k) => {
+    const b = el('button', { className: 'opt', type: 'button' }, el('span', { className: 'k', textContent: k + 1 }), el('span', { textContent: o }));
+    b.onclick = () => pick(k);
+    return b;
+  }));
+}
+function gradeTone(choice) {
+  if (mode !== 'tone' || !tone) return;
+  const q = tone.queue[tone.si];
+  const ok = choice === q.answer;
+  markAnswer(q.answer, choice);
+  $('reveal').replaceChildren(paintPy(el('div'), q.text), el('div', { className: 'vi', textContent: tone.word.vi || tone.word.m }));
+  if (ok) { tone.right++; $('ptsMe').textContent = tone.right; sfx.ok(); vibrate(15); }
+  else {
+    tone.wrong++;
+    $('ptsOpp').textContent = tone.wrong;
+    if (!tone.marked && tone.word?.id) { tone.marked = true; socket.emit('missed', tone.word.id); }
+    sfx.bad();
+    vibrate([40, 30, 40]);
+  }
+  tone.si++;
+  const wait = ok ? 450 : 900;
+  tone.timer = setTimeout(() => {
+    if (mode !== 'tone' || !tone) return;
+    if (tone.si < tone.queue.length) showTone();
+    else nextToneWord();
+  }, wait);
+}
+function endTone() {
+  if (mode !== 'tone' || !tone) return;
+  const snap = tone;
+  tone = null;
+  mode = 'end-tone';
+  clearTimeout(snap.timer);
+  stopClock();
+  pickFn = null;
+  $('drillExit').hidden = true;
+  stampVerdict(snap.right ? '声' : '习', !snap.right);
+  $('endTitle').textContent = `${snap.right} âm đúng`;
+  $('endSub').textContent = `${hskLabel(snap.level)} · sai ${snap.wrong}`;
+  $('endDelta').textContent = 'Thanh điệu · không tính điểm';
+  $('endDelta').style.color = '';
+  $('againPlayBtn').textContent = 'Luyện tiếp';
+  prepareEnd(false);
+  setShare(['Thanh điệu ' + hskLabel(snap.level), `${snap.right} âm đúng`, `Sai ${snap.wrong}`]);
+  renderReview([]);
+  show('end');
+}
+function startSurvive() {
+  stopSearch();
+  stopClock();
+  const level = +store.get('surviveLevel') || 1;
+  survive = { level, score: 0, id: Symbol(), timer: null, why: '', missed: null };
+  mode = 'survive';
+  enterGameHud('Chuỗi', 'Kỷ lục');
+  $('ptsOpp').textContent = surviveRecord(level);
+  $('ptsMe').textContent = 0;
+  $('hudMeAv').hidden = $('hudOppAv').hidden = true;
+  $('drillExit').hidden = false;
+  $('drillExit').textContent = 'Dừng lại';
+  $('roundLbl').textContent = 'Sống sót';
+  $('gameHint').textContent = 'Sai hoặc hết giờ là dừng · phím 1–4';
+  show('game');
+  nextSurvive();
+}
+async function nextSurvive() {
+  if (mode !== 'survive' || !survive) return;
+  const id = survive.id;
+  const q = await call('practice', practiceArgs(survive.level));
+  if (mode !== 'survive' || !survive || survive.id !== id) return;
+  if (q.error) { toast(q.error); survive.timer = setTimeout(nextSurvive, 800); return; }
+  let settled = false;
+  const finish = (ok, choice) => {
+    if (settled || mode !== 'survive' || !survive || survive.id !== id) return;
+    settled = true;
+    stopClock();
+    clearTimeout(survive.timer);
+    pickFn = null;
+    if (ok) {
+      survive.score++;
+      $('ptsMe').textContent = survive.score;
+      $('opts').children[choice]?.classList.add('ok');
+      sfx.ok();
+      vibrate(15);
+      $('roundLbl').textContent = `Chuỗi ${survive.score}`;
+      survive.timer = setTimeout(nextSurvive, 220);
+      return;
+    }
+    if (q.word?.id) socket.emit('missed', q.word.id);
+    survive.why = choice === null ? 'time' : 'miss';
+    survive.missed = q.word;
+    markAnswer(q.answer, choice);
+    if (q.word) showWord(q.word);
+    if (choice === null) floatText('hết giờ', 'var(--red)');
+    sfx.bad();
+    vibrate([40, 30, 40]);
+    survive.timer = setTimeout(endSurvive, 900);
+  };
+  $('roundLbl').textContent = survive.score ? `Chuỗi ${survive.score}` : 'Sống sót';
+  renderQuestion(q, i => finish(i === q.answer, i));
+  runClock(10000, sfx.tick, () => finish(false, null));
+}
+async function endSurvive() {
+  if (mode !== 'survive' || !survive) return;
+  const snap = survive;
+  survive = null;
+  mode = 'end-survive';
+  stopClock();
+  clearTimeout(snap.timer);
+  pickFn = null;
+  $('drillExit').hidden = true;
+  const before = surviveRecord(snap.level);
+  let best = Math.max(snap.score, before);
+  if (snap.score >= 1 && snap.score <= 300) {
+    const res = await call('surviveBest', { level: snap.level, score: Math.min(snap.score, 300) });
+    if (res?.surviveBest) {
+      if (me) me.surviveBest = res.surviveBest;
+      best = Math.max(best, res.surviveBest[snap.level] || 0);
+    }
+  }
+  store.set('survive' + snap.level, best);
+  const record = snap.score > before && snap.score > 0;
+  const why = snap.why === 'time' ? 'hết giờ' : snap.why === 'miss' ? 'dừng vì sai' : 'dừng giữa chừng';
+  stampVerdict(record ? '最' : '生', false);
+  $('endTitle').textContent = `${snap.score} câu`;
+  $('endSub').textContent = `${hskLabel(snap.level)} · ${why}`;
+  $('endDelta').textContent = record ? 'Kỷ lục mới' : `Kỷ lục: ${best}`;
+  $('endDelta').style.color = record ? 'var(--red)' : '';
+  $('againPlayBtn').textContent = 'Chơi lại';
+  prepareEnd(false);
+  setShare(['Sống sót ' + hskLabel(snap.level), `${snap.score} câu`, record ? 'Kỷ lục mới' : `Kỷ lục ${best}`]);
+  renderReview(snap.missed ? [snap.missed] : []);
+  show('end');
+  if (record) sfx.win();
+}
+function startPass() {
+  const a = $('ppA').value.trim().slice(0, 20);
+  const b = $('ppB').value.trim().slice(0, 20);
+  if (!a || !b) return toast('Hãy nhập tên hai người.');
+  stopSearch();
+  stopClock();
+  pp = { names: [a, b], level: +store.get('ppLevel') || 1, i: 0, scores: [0, 0], wrong: [], id: Symbol(), busy: false };
+  beginPassTurn();
+}
+async function beginPassTurn() {
+  if (!pp || pp.busy) return;
+  const id = pp.id;
+  pp.busy = true;
+  mode = 'pp';
+  const q = await call('practice', { level: pp.level });
+  if (!pp || pp.id !== id) return;
+  pp.busy = false;
+  if (q.error) return toast(q.error);
+  const who = pp.i % 2;
+  enterGameHud(pp.names[0], pp.names[1]);
+  $('ptsMe').textContent = pp.scores[0];
+  $('ptsOpp').textContent = pp.scores[1];
+  $('roundLbl').textContent = pp.names[who];
+  $('clock').textContent = `${pp.i + 1}/10`;
+  $('fuse').hidden = true;
+  $('hudMeAv').hidden = $('hudOppAv').hidden = true;
+  $('drillExit').hidden = false;
+  $('drillExit').textContent = 'Kết thúc';
+  $('turnNext').hidden = true;
+  $('gameHint').textContent = `Lượt của ${pp.names[who]} · phím 1–4`;
+  show('game');
+  renderQuestion(q, choice => {
+    if (!pp || pp.id !== id) return;
+    const ok = choice === q.answer;
+    if (ok) pp.scores[who]++;
+    else {
+      if (q.word) pp.wrong.push(q.word);
+      if (q.word?.id) socket.emit('missed', q.word.id);
+    }
+    markAnswer(q.answer, choice);
+    if (q.word) showWord(q.word);
+    $('ptsMe').textContent = pp.scores[0];
+    $('ptsOpp').textContent = pp.scores[1];
+    if (ok) { sfx.ok(); vibrate(15); } else { sfx.bad(); vibrate([40, 30, 40]); }
+    pp.i++;
+    $('turnNext').hidden = false;
+    $('turnNext').textContent = pp.i >= 10 ? 'Xem kết quả' : 'Đổi lượt';
+    $('gameHint').textContent = pp.i >= 10 ? 'Hết 10 câu.' : 'Đọc xong rồi hãy đổi máy.';
+  });
+}
+function hush() { listenText = null; if (window.speechSynthesis) speechSynthesis.cancel(); }
+function showHandoff() {
+  if (!pp) return;
+  mode = 'pp-hand';
+  pickFn = null;
+  stopClock();
+  hush();
+  $('reveal').replaceChildren();
+  $('opts').replaceChildren();
+  $('prompt').textContent = '';
+  $('turnNext').hidden = true;
+  $('handTitle').textContent = `Đưa máy cho ${pp.names[pp.i % 2]}`;
+  $('handSub').textContent = 'Người kia không thấy đáp án.';
+  $('handScore').textContent = `${pp.names[0]} ${pp.scores[0]} · ${pp.names[1]} ${pp.scores[1]} · câu ${pp.i + 1}/10`;
+  show('handoff');
+}
+function afterPassTurn() {
+  if (!pp) return;
+  $('turnNext').hidden = true;
+  if (pp.i >= 10) endPass();
+  else showHandoff();
+}
+function endPass() {
+  if (!pp || (mode !== 'pp' && mode !== 'pp-hand')) return;
+  const snap = pp;
+  pp = null;
+  mode = 'end-pp';
+  stopClock();
+  hush();
+  pickFn = null;
+  $('drillExit').hidden = true;
+  $('turnNext').hidden = true;
+  const [a, b] = snap.names;
+  const [sa, sb] = snap.scores;
+  const draw = sa === sb;
+  stampVerdict(draw ? '和' : '对', false);
+  $('endTitle').textContent = draw ? 'Hoà' : `${sa > sb ? a : b} hơn`;
+  $('endSub').textContent = `${a} ${sa} · ${b} ${sb}`;
+  $('endDelta').textContent = 'Hai người một máy · không tính Elo';
+  $('endDelta').style.color = '';
+  $('againPlayBtn').textContent = 'Chơi lại';
+  prepareEnd(false);
+  setShare(['Hai người một máy', `${a} ${sa} · ${b} ${sb}`, 'Không tính Elo']);
+  renderReview(snap.wrong);
+  show('end');
+}
+function notebookCell(s) { return String(s ?? '').replace(/[\t\r\n]+/g, ' ').trim(); }
+async function copyNotebook() {
+  const res = await call('review');
+  if (res.error) return toast(res.error);
+  if (!res.words?.length) return toast('Chưa có từ để chép.');
+  const text = res.words.map(w => [w.h, w.p, w.m].map(notebookCell).join('\t')).join('\n');
+  try { await navigator.clipboard.writeText(text); toast(`Đã chép ${res.words.length} từ.`); }
+  catch { toast('Không chép được.'); }
+}
+async function lookupFamily() {
+  const res = await call('family', { q: $('familyInput').value });
+  if (res.error) { toast(res.error); $('familyList').replaceChildren(); return; }
+  $('familyList').replaceChildren(...res.words.map(w => el('tr', {},
+    el('td', { className: 'hz', lang: 'zh', textContent: w.h }),
+    el('td', {}, paintPy(el('div'), w.p), el('div', { className: 'mute', textContent: w.m })),
+    el('td', { className: 'lvn', textContent: w.level === 7 ? '7–9' : String(w.level) }))));
+}
+function renderGroup(g) {
+  const box = $('groupBox');
+  if (!box) return;
+  if (!g?.code) {
+    box.replaceChildren(
+      el('button', { className: 'btn block', id: 'groupCreate', type: 'button', textContent: 'Tạo mã nhóm' }),
+      el('label', { className: 'sr', for: 'groupCode', textContent: 'Mã nhóm' }),
+      el('input', { className: 'field', id: 'groupCode', maxlength: 8, placeholder: 'Mã nhóm', autocomplete: 'off', style: 'margin-top:14px' }),
+      el('button', { className: 'btn block', id: 'groupJoin', type: 'button', textContent: 'Vào nhóm', style: 'margin-top:14px' }),
+    );
+    $('groupCreate').onclick = async () => {
+      const r = await call('groupCreate');
+      if (r.error) return toast(r.error);
+      renderGroup(r);
+    };
+    const join = async () => {
+      const r = await call('groupJoin', { code: $('groupCode').value });
+      if (r.error) return toast(r.error);
+      renderGroup(r);
+    };
+    $('groupJoin').onclick = join;
+    $('groupCode').onkeydown = e => { if (e.key === 'Enter') join(); };
+    return;
+  }
+  box.replaceChildren(
+    el('div', { className: 'group-code', textContent: g.code }),
+    el('button', { className: 'btn text', id: 'groupCopy', type: 'button', textContent: 'Chép mã' }),
+    el('table', { className: 'ledger', id: 'groupLedger' }, ...g.members.map(m => el('tr', { className: m.you ? 'me' : '' },
+      el('td', {}, el('span', { className: 'seal sm', textContent: m.seal || initial(m.name) }), m.name),
+      el('td', { className: 'r', textContent: `${m.streak} ngày · ${m.daily ? 'xong' : 'chưa'}` }),
+    ))),
+    el('button', { className: 'btn text', id: 'groupLeave', type: 'button', textContent: 'Rời nhóm', style: 'margin-top:8px' }),
+  );
+  $('groupCopy').onclick = async () => {
+    try { await navigator.clipboard.writeText(g.code); toast('Đã chép mã nhóm.'); }
+    catch { toast(g.code); }
+  };
+  $('groupLeave').onclick = async () => {
+    const r = await call('groupLeave');
+    if (r.error) return toast(r.error);
+    toast('Đã rời nhóm.');
+    renderGroup(r);
+  };
+}
+async function loadGroup() {
+  const res = await call('group');
+  if (res.error) return;
+  renderGroup(res);
+}
+$('toneStart').onclick = startTone;
+$('surviveStart').onclick = startSurvive;
+$('ppStart').onclick = startPass;
+$('handGo').onclick = () => beginPassTurn();
+$('handStop').onclick = () => endPass();
+$('turnNext').onclick = () => afterPassTurn();
+$('copyReview').onclick = () => copyNotebook();
+$('familyGo').onclick = () => lookupFamily();
+$('familyInput').onkeydown = e => { if (e.key === 'Enter') lookupFamily(); };
+
 /* ---------- Keyboard ---------- */
 document.addEventListener('keydown', e => {
   if (e.target.matches('input, textarea')) return;
-  if (!$('game').hidden && pickFn && e.key >= '1' && e.key <= '4') { e.preventDefault(); pick(+e.key - 1); }
+  const maxKey = mode === 'tone' ? '5' : '4';
+  if (!$('game').hidden && pickFn && e.key >= '1' && e.key <= maxKey) { e.preventDefault(); pick(+e.key - 1); }
   if (!$('game').hidden && listenText && e.key.toLowerCase() === 'r') speak(listenText);
   if (!$('cards').hidden) {
     if (e.key === ' ') { e.preventDefault(); flip(); }

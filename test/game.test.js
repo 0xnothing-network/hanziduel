@@ -27,6 +27,40 @@ test('points reward speed only when correct', () => {
   assert.strictEqual(G.points(true, -5), 50);
 });
 
+test('pinyin: tone marks and tone numbers match, neutral tone is 5 or nothing', () => {
+  assert.strictEqual(G.samePinyin('zhōngguó', 'zhong1 guo2'), true);
+  assert.strictEqual(G.samePinyin('  Mei2 ', 'méi'), true);
+  assert.strictEqual(G.samePinyin('Nǚ', 'nv3'), true);
+  assert.strictEqual(G.samePinyin('nü3', 'nv3'), true);
+  assert.strictEqual(G.samePinyin('nu:3', 'nǚ'), true);
+  assert.strictEqual(G.samePinyin('le', 'le5'), true);
+  assert.strictEqual(G.samePinyin("xī'ān", 'xi1an1'), true);
+  assert.strictEqual(G.samePinyin("xī'ān", 'xian1'), false);
+  assert.strictEqual(G.samePinyin('nǚháir', 'nv3hair2'), true);
+  assert.strictEqual(G.samePinyin('le', 'le1'), false);
+  assert.strictEqual(G.samePinyin('ma', 'ma1'), false);
+  assert.strictEqual(G.samePinyin('', 'le'), false);
+  assert.strictEqual(G.samePinyin('   ', 'le'), false);
+});
+
+test('daily set is the same paper all day and a different one tomorrow', () => {
+  const day = '2026-11-10';
+  const a = G.dailySet(WORDS, day);
+  const b = G.dailySet(WORDS, day);
+  assert.strictEqual(a.length, G.DAILY_ROUNDS);
+  assert.deepStrictEqual(a.map(q => [q.type, q.prompt, q.options, q.answer]), b.map(q => [q.type, q.prompt, q.options, q.answer]));
+  assert.deepStrictEqual(a.map(q => q.level), [1, 1, 1, 1, 2, 2, 2, 3, 3, 3]);
+  assert.ok(a.every(q => !q.listen && q.options.length === 4));
+  const other = G.dailySet(WORDS, '2026-11-11');
+  assert.notDeepStrictEqual(a.map(q => q.prompt + q.options.join('\0')), other.map(q => q.prompt + q.options.join('\0')));
+  const w = G.wordOfDay(WORDS, day);
+  assert.ok(w.h && w.p && w.m);
+  assert.strictEqual(w.level, 1);
+  assert.ok(!a.some(q => q.word.id === w.id));
+  assert.strictEqual(G.points(true, 6000, 12000), 75);
+  assert.strictEqual(G.points(true, 0, 12000), 50);
+});
+
 test('every word has a meaning, almost all in Vietnamese', () => {
   const all = Object.values(WORDS).flat();
   assert.ok(all.length > 10000);
@@ -44,6 +78,76 @@ test('every word has a meaning, almost all in Vietnamese', () => {
   assert.strictEqual(find('吃').m, 'ăn');
   assert.strictEqual(find('说').m, 'nói');
   assert.strictEqual(find('国').m, 'quốc gia');
+});
+
+test('pinyin syllables keep the tone mark and number every tone', () => {
+  assert.deepStrictEqual(G.pinyinSyllables('zhōngguó'), [
+    { text: 'zhōng', tone: 1 },
+    { text: 'guó', tone: 2 },
+  ]);
+  assert.deepStrictEqual(G.pinyinSyllables('zhong1guo2'), [
+    { text: 'zhong1', tone: 1 },
+    { text: 'guo2', tone: 2 },
+  ]);
+  assert.deepStrictEqual(G.pinyinSyllables('bàba'), [
+    { text: 'bà', tone: 4 },
+    { text: 'ba', tone: 5 },
+  ]);
+  assert.deepStrictEqual(G.pinyinSyllables("xī'ān"), [
+    { text: 'xī', tone: 1 },
+    { text: "'", tone: 0 },
+    { text: 'ān', tone: 1 },
+  ]);
+  assert.deepStrictEqual(G.pinyinSyllables('bàn nián').map(p => p.tone), [4, 0, 2]);
+  const mei = G.pinyinSyllables('  Mei2 ');
+  assert.ok(mei.some(p => p.text === 'Mei2' && p.tone === 2));
+  assert.strictEqual(mei.map(p => p.text).join(''), '  Mei2 ');
+  assert.strictEqual(G.pinyinSyllables('le')[0].tone, 5);
+  assert.deepStrictEqual(G.pinyinSyllables('le5'), [{ text: 'le5', tone: 5 }]);
+  assert.strictEqual(G.pinyinSyllables('nǚ')[0].tone, 3);
+  assert.ok(G.pinyinSyllables('nǚ')[0].text.includes('ǚ'));
+  assert.strictEqual(G.pinyinSyllables('nv3')[0].tone, 3);
+  assert.ok(G.pinyinSyllables('nv3')[0].text.includes('3'));
+  for (const [marked, tone] of [['bā', 1], ['bá', 2], ['bǎ', 3], ['bà', 4], ['ba', 5]])
+    assert.strictEqual(G.pinyinSyllables(marked)[0].tone, tone, marked);
+  const all = Object.values(WORDS).flat();
+  for (const w of all) {
+    const parts = G.pinyinSyllables(w.p);
+    assert.strictEqual(parts.map(p => p.text).join(''), w.p.normalize('NFC'), w.id);
+    assert.ok(parts.some(p => p.tone >= 1 && p.tone <= 5), w.id);
+    assert.ok(parts.every(p => p.tone >= 0 && p.tone <= 5), w.id);
+  }
+  const hyphen = all.find(w => w.p.includes('-'));
+  assert.ok(G.pinyinSyllables(hyphen.p).some(p => p.text === '-'));
+});
+
+test('tone drill asks one question per syllable', () => {
+  const choices = ['Thanh 1', 'Thanh 2', 'Thanh 3', 'Thanh 4', 'Thanh nhẹ'];
+  const ai = Object.values(WORDS).flat().find(w => w.h === '爱');
+  const one = G.toneDrill(ai);
+  assert.strictEqual(one.length, 1);
+  assert.deepStrictEqual(one[0].options, choices);
+  assert.strictEqual(one[0].answer, 3);
+  assert.strictEqual(one[0].options[one[0].answer], 'Thanh 4');
+  assert.ok(one[0].text.includes('à'));
+  const two = G.toneDrill({ p: 'bàba' });
+  assert.strictEqual(two.length, 2);
+  assert.strictEqual(two[0].tone, 4);
+  assert.strictEqual(two[1].answer, 4);
+  assert.strictEqual(two[1].options[two[1].answer], 'Thanh nhẹ');
+  assert.deepStrictEqual(G.toneDrill({ p: '' }), []);
+  assert.deepStrictEqual(G.toneDrill(null), []);
+  const spaced = Object.values(WORDS).flat().find(w => w.p.includes(' '));
+  const qs = G.toneDrill(spaced);
+  const syl = G.pinyinSyllables(spaced.p).filter(s => s.tone >= 1);
+  assert.strictEqual(qs.length, syl.length);
+  assert.ok(qs.length >= 2, spaced.h);
+  qs.forEach((q, i) => {
+    assert.deepStrictEqual(q.options, choices);
+    assert.strictEqual(q.text, syl[i].text);
+    assert.strictEqual(q.answer, syl[i].tone === 5 ? 4 : syl[i].tone - 1);
+    assert.ok(q.answer >= 0 && q.answer < 5);
+  });
 });
 
 test('questions: three types, level range respected, 4 distinct options with one answer', () => {

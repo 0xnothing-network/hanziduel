@@ -333,6 +333,11 @@ test('pvp: leaving mid-match forfeits', { timeout: 30000 }, async () => {
   assert.strictEqual(end.forfeit, true);
   assert.strictEqual(end.left, false);
   assert.strictEqual(end.delta, 16);
+  assert.strictEqual(end.me.winStreak, 1);
+  assert.strictEqual(end.perfect, false);
+  assert.strictEqual(end.me.recent[0].forfeit, true);
+  assert.strictEqual(end.me.recent[0].pid, b.me.pid);
+  assert.strictEqual(end.me.recent[0].ranked, true);
   const board = await a.call('leaderboard');
   assert.strictEqual(board[0].name, 'stay');
   assert.strictEqual(board[0].pid, end.me.pid);
@@ -354,3 +359,283 @@ test('restore after hibernation: connections keep their player', async () => {
   assert.strictEqual((await started).opponent.name, 'other');
   conn.close(); other.close();
 });
+
+function solveDaily(q) {
+  const pools = [WORDS[q.level], Object.values(WORDS).flat()];
+  for (const pool of pools) {
+    const hits = q.type === 'Việt → Hán'
+      ? q.options.map((o, i) => pool.some(w => w.h === o && w.m === q.prompt) ? i : -1).filter(i => i >= 0)
+      : q.options.map((o, i) => pool.some(w => w.h === q.prompt && w.m === o) ? i : -1).filter(i => i >= 0);
+    if (hits.length === 1) return hits[0];
+  }
+  assert.fail('ambiguous daily question ' + JSON.stringify({ type: q.type, prompt: q.prompt, options: q.options }));
+}
+
+test('daily paper is shared, scored on the server, and survives a restart', async () => {
+  let t = Date.parse('2026-11-10T02:00:00Z');
+  const sql = sqlite();
+  const core = createCore({ sql, now: () => t });
+  const [a, b] = await Promise.all([guest(core, 'a'), guest(core, 'b')]);
+  assert.ok((await client(core).call('daily')).error);
+  const paper = await a.call('daily');
+  assert.strictEqual(paper.day, '2026-11-10');
+  assert.ok(paper.word.h && paper.word.p && paper.word.id === undefined);
+  const qa = await a.call('dailyBegin');
+  const qb = await b.call('dailyBegin');
+  assert.deepStrictEqual([qa.prompt, qa.options], [qb.prompt, qb.options]);
+  assert.ok(!('answer' in qa) && !('word' in qa) && !qa.listen);
+  t += 3000;
+  const held = await a.call('dailyBegin');
+  assert.strictEqual(held.prompt, qa.prompt);
+  assert.strictEqual(held.ms, G.DAILY_MS - 3000);
+  const first = await a.call('dailyAnswer', { i: solveDaily(qa) });
+  assert.strictEqual(first.reveal.ok, true);
+  assert.strictEqual(first.reveal.gain, G.points(true, G.DAILY_MS - 3000, G.DAILY_MS));
+  assert.strictEqual(first.next.n, 2);
+  const woken = createCore({ sql, now: () => t });
+  const a2 = client(woken);
+  await a2.call('resume', { token: a.token });
+  const cont = await a2.call('dailyBegin');
+  assert.strictEqual(cont.n, 2);
+  assert.strictEqual(cont.prompt, first.next.prompt);
+  t += G.DAILY_MS + G.DAILY_GRACE_MS + 1;
+  const late = await a2.call('dailyAnswer', { i: solveDaily(cont) });
+  assert.strictEqual(late.reveal.ok, false);
+  let step = late;
+  while (!step.done) {
+    t += 500;
+    step = await a2.call('dailyAnswer', { i: solveDaily(step.next) });
+  }
+  assert.strictEqual(step.correct, 9);
+  assert.ok(step.board.some(p => p.pid === a.me.pid && p.correct === 9));
+  assert.ok(step.me.badges.find(x => x.id === 'daily').on);
+  assert.match((await a2.call('dailyBegin')).error, /hoàn thành/);
+  assert.ok((await a2.call('review')).words.some(w => w.h === late.reveal.word.h));
+});
+
+test('drill record is personal and only saved when it improves', async () => {
+  const sql = sqlite();
+  let writes = 0;
+  const exec = sql.exec;
+  sql.exec = (q, ...p) => { if (/^\s*insert into players/i.test(q)) writes++; return exec(q, ...p); };
+  const core = createCore({ sql });
+  const s = await guest(core, 'sprinter');
+  writes = 0;
+  assert.ok((await client(core).call('drillBest', { level: 1, score: 10 })).error);
+  for (const bad of [{ level: 0, score: 5 }, { level: 1, score: 0 }, { level: 1, score: 1.5 }, { level: 1, score: 301 }, { level: '1', score: 10 }])
+    assert.ok((await s.call('drillBest', bad)).error, JSON.stringify(bad));
+  assert.strictEqual((await s.call('drillBest', { level: 1, score: 10 })).drillBest[1], 10);
+  assert.strictEqual((await s.call('drillBest', { level: 1, score: 10 })).drillBest[1], 10);
+  assert.strictEqual((await s.call('drillBest', { level: 1, score: 4 })).drillBest[1], 10);
+  assert.strictEqual(writes, 1, 'a repeat or a lower score does not write');
+});
+
+test('presence counts who is online and who is queued', async () => {
+  const core = createCore({ sql: sqlite() });
+  const a = await guest(core, 'here');
+  const seen = a.next('presence');
+  await guest(core, 'also');
+  assert.deepStrictEqual(await seen, { online: 2, queued: 0 });
+  const queued = a.next('presence');
+  a.emit('queue');
+  assert.deepStrictEqual(await queued, { online: 2, queued: 1 });
+  const resumed = await client(core).call('resume', { token: a.token });
+  assert.deepStrictEqual(resumed.presence, { online: 2, queued: 0 });
+  assert.ok(!JSON.stringify(resumed.presence).includes('u:'));
+});
+
+test('practice can filter one real question type and rejects the rest', async () => {
+  const core = createCore({ sql: sqlite() });
+  const s = await guest(core, 'filter');
+  assert.deepStrictEqual(G.TYPES.map(t => t.type), ['Hán → Việt', 'Việt → Hán', 'Nghe → nghĩa']);
+  assert.ok((await client(core).call('practice', { level: 1, type: 'Hán → Việt' })).error);
+  for (const type of G.TYPES.map(t => t.type)) {
+    for (let i = 0; i < 6; i++) {
+      const q = await s.call('practice', { level: 1, type });
+      assert.strictEqual(q.type, type);
+      assert.strictEqual(!!q.listen, type === 'Nghe → nghĩa');
+    }
+  }
+  const mixed = new Set();
+  for (let i = 0; i < 24 && mixed.size < 3; i++) mixed.add((await s.call('practice', { level: 1 })).type);
+  assert.strictEqual(mixed.size, 3, 'omitted type still uses all three');
+  for (const type of ['listen', 'Hán', 'Nghe', 'pinyin', '', 1, null, { type: 'Hán → Việt' }])
+    assert.ok((await s.call('practice', { level: 1, type })).error, JSON.stringify(type));
+});
+
+function familyList(ch) {
+  const list = [];
+  for (const [lv, ws] of Object.entries(WORDS)) {
+    for (const w of ws) if (new Set([...w.h]).has(ch)) list.push({ h: w.h, p: w.p, m: w.m, level: +lv });
+  }
+  return list;
+}
+
+test('character family is capped, ordered, and rejects empty or multi-character queries', async () => {
+  const core = createCore({ sql: sqlite() });
+  const s = await guest(core, 'family');
+  assert.ok((await client(core).call('family', { q: '不' })).error);
+  for (const q of ['', '   ', '不好', '不 好', '不人', 'QQ', 1, null, ['不']])
+    assert.match((await s.call('family', { q })).error, /một chữ/, JSON.stringify(q));
+  assert.match((await s.call('family', { q: 'Q' })).error, /Không có/);
+  const all = familyList('不');
+  assert.ok(all.length > 24);
+  const res = await s.call('family', { q: ' 不 ' });
+  assert.strictEqual(res.ch, '不');
+  assert.strictEqual(res.words.length, 24);
+  assert.deepStrictEqual(res.words, all.slice(0, 24));
+  assert.deepStrictEqual(Object.keys(res.words[0]).sort(), ['h', 'level', 'm', 'p']);
+  assert.ok(res.words.every((w, i) => i === 0 || w.level >= res.words[i - 1].level));
+  assert.ok(res.words.every(w => [...w.h].includes('不') && w.m && w.p));
+  const love = await s.call('family', { q: '爱' });
+  assert.deepStrictEqual(love, await s.call('family', { q: ' 爱 ' }));
+  assert.ok(love.words.length <= 24);
+  assert.ok(love.words.some(w => w.h === '爱'));
+});
+
+test('survival best is personal, capped, and does not move Elo', async () => {
+  const sql = sqlite();
+  let writes = 0;
+  const exec = sql.exec;
+  sql.exec = (q, ...p) => { if (/^\s*insert into players/i.test(q)) writes++; return exec(q, ...p); };
+  const core = createCore({ sql });
+  const s = await guest(core, 'survivor');
+  writes = 0;
+  assert.ok((await client(core).call('surviveBest', { level: 1, score: 4 })).error);
+  for (const bad of [{ level: 0, score: 5 }, { level: 1, score: 0 }, { level: 1, score: 301 }, { level: '1', score: 3 }])
+    assert.ok((await s.call('surviveBest', bad)).error, JSON.stringify(bad));
+  assert.strictEqual((await s.call('surviveBest', { level: 2, score: 5 })).surviveBest[2], 5);
+  assert.strictEqual((await s.call('surviveBest', { level: 2, score: 3 })).surviveBest[2], 5);
+  assert.strictEqual(writes, 1, 'a lower or repeated survival score does not write');
+  const me = (await s.call('me')).me;
+  assert.strictEqual(me.rating, G.START_RATING);
+  assert.strictEqual(me.surviveBest[2], 5);
+  assert.ok(!me.drillBest[2]);
+});
+
+test('study group survives hibernation and does not change Elo', async () => {
+  let t = Date.parse('2026-11-10T02:00:00Z');
+  const file = tmpDb();
+  const sql = sqlite(file);
+  const core = createCore({ sql, now: () => t });
+  const host = await guest(core, 'host');
+  const friend = await guest(core, 'friend');
+  assert.strictEqual(host.me.rating, G.START_RATING);
+  assert.ok((await client(core).call('group')).error);
+  assert.ok((await client(core).call('groupCreate')).error);
+  assert.deepStrictEqual(await host.call('group'), { code: null, members: [] });
+  for (const code of ['', 'abc', 'zzzzzz', null])
+    assert.ok((await friend.call('groupJoin', { code })).error, String(code));
+  const created = await host.call('groupCreate');
+  assert.match(created.code, /^[0-9a-f]{6}$/);
+  assert.strictEqual(created.members.length, 1);
+  assert.strictEqual(created.members[0].name, 'host');
+  assert.strictEqual(created.members[0].you, true);
+  assert.strictEqual(created.members[0].daily, false);
+  assert.ok((await host.call('groupCreate')).error, 'one group per player');
+  if (created.code !== 'abcdef') assert.ok((await friend.call('groupJoin', { code: 'abcdef' })).error);
+  const joined = await friend.call('groupJoin', { code: created.code.toUpperCase() });
+  assert.deepStrictEqual(joined.members.map(m => m.name), ['host', 'friend']);
+  assert.strictEqual(joined.members[1].you, true);
+  assert.strictEqual((await host.call('groupJoin', { code: created.code })).code, created.code);
+  const other = await guest(core, 'other');
+  const otherGroup = await other.call('groupCreate');
+  assert.match((await friend.call('groupJoin', { code: otherGroup.code })).error, /rời nhóm/);
+  await host.call('seal', { seal: '寅' });
+  await host.call('practice', { level: 1 });
+  const members = sql.exec('SELECT count(*) AS n FROM study_members').toArray()[0].n;
+  await host.call('practice', { level: 1 });
+  host.emit('missed', '爱');
+  host.emit('missed', '爱');
+  await new Promise(r => setTimeout(r, 5));
+  assert.strictEqual(sql.exec('SELECT count(*) AS n FROM study_members').toArray()[0].n, members, 'answering does not write the group');
+  assert.strictEqual((await host.call('me')).me.rating, G.START_RATING);
+  assert.strictEqual((await friend.call('me')).me.rating, G.START_RATING);
+  const fr = sql.exec('SELECT id, data FROM players').toArray().find(r => JSON.parse(r.data).name === 'friend');
+  const data = JSON.parse(fr.data);
+  data.daily = { d: '2026-11-10', correct: 8, score: 10, ms: 1000 };
+  sql.exec('UPDATE players SET data = ? WHERE id = ?', JSON.stringify(data), fr.id);
+
+  const woken = createCore({ sql: sqlite(file), now: () => t });
+  const host2 = client(woken);
+  const resumed = await host2.call('resume', { token: host.token });
+  assert.strictEqual(resumed.me.rating, G.START_RATING);
+  const g = await host2.call('group');
+  assert.strictEqual(g.code, created.code);
+  assert.deepStrictEqual(g.members.map(m => [m.name, m.you, m.daily, m.streak]), [
+    ['host', true, false, 1],
+    ['friend', false, true, 0],
+  ]);
+  assert.strictEqual(g.members[0].seal, '寅');
+  assert.ok(!JSON.stringify(g).includes('u:'));
+  assert.ok(!('rating' in g.members[0]));
+  await host2.call('groupLeave');
+  const friend2 = client(woken);
+  await friend2.call('resume', { token: friend.token });
+  assert.deepStrictEqual((await friend2.call('group')).members.map(m => m.name), ['friend']);
+  assert.deepStrictEqual(await friend2.call('groupLeave'), { code: null, members: [] });
+  assert.match((await friend2.call('groupJoin', { code: created.code })).error, /Không thấy/);
+  assert.match((await friend2.call('groupLeave')).error, /chưa có nhóm/);
+  assert.strictEqual((await friend2.call('me')).me.rating, G.START_RATING);
+  assert.strictEqual((await host2.call('me')).me.rating, G.START_RATING);
+});
+
+test('a study group holds at most 12 people', async () => {
+  const core = createCore({ sql: sqlite() });
+  const host = await guest(core, 'host');
+  const { code } = await host.call('groupCreate');
+  for (let i = 0; i < 11; i++) assert.strictEqual((await (await guest(core, 'p' + i)).call('groupJoin', { code })).members.length, i + 2);
+  const extra = await guest(core, 'extra');
+  assert.match((await extra.call('groupJoin', { code })).error, /đủ/);
+  assert.strictEqual((await extra.call('me')).me.rating, G.START_RATING);
+});
+
+test('direct challenge is unranked, expires, and reactions are a fixed set', { timeout: 30000 }, async () => {
+  let t = Date.now();
+  const core = createCore({ sql: sqlite(), now: () => t });
+  const [a, b] = await Promise.all([guest(core, 'a'), guest(core, 'b')]);
+  const asleep = await guest(core, 'asleep');
+  asleep.close();
+  assert.match((await a.call('challenge', { pid: a.me.pid })).error, /chính mình/);
+  assert.match((await a.call('challenge', { pid: 'zzzz' })).error, /Không tìm thấy/);
+  assert.match((await a.call('challenge', { pid: asleep.me.pid })).error, /offline/);
+  assert.ok((await client(core).call('challenge', { pid: b.me.pid })).error);
+  const note = b.next('challenge');
+  assert.deepStrictEqual(await a.call('challenge', { pid: b.me.pid }), {});
+  const ch = await note;
+  assert.strictEqual(ch.name, 'a');
+  assert.strictEqual(ch.pid, a.me.pid);
+  assert.ok(!JSON.stringify(ch).includes('u:'));
+  const closed = a.next('challengeClosed');
+  assert.deepStrictEqual(await b.call('decline'), {});
+  await closed;
+  assert.match((await b.call('accept')).error, /hết/);
+  const again = b.next('challenge');
+  await a.call('challenge', { pid: b.me.pid });
+  await again;
+  t += 61_000;
+  assert.match((await b.call('accept')).error, /hết/);
+  const live = b.next('challenge');
+  await a.call('challenge', { pid: b.me.pid });
+  await live;
+  const started = a.next('start');
+  const seen = [];
+  b.on('react', x => seen.push(x));
+  assert.deepStrictEqual(await b.call('accept'), {});
+  const st = await started;
+  assert.strictEqual(st.ranked, false);
+  assert.strictEqual(st.opponent.recent, undefined);
+  a.emit('react', 'hello');
+  a.emit('react', '加油');
+  a.emit('react', '谢谢');
+  assert.deepStrictEqual(seen, ['加油', '谢谢']);
+  b.close();
+  const end = await a.next('end');
+  assert.strictEqual(end.ranked, false);
+  assert.strictEqual(end.delta, 0);
+  assert.strictEqual(end.me.wins, 0);
+  assert.strictEqual(end.me.winStreak, 0);
+  assert.strictEqual(end.me.recent[0].pid, b.me.pid);
+  assert.strictEqual(end.me.recent[0].ranked, false);
+});
+
